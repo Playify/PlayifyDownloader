@@ -1,0 +1,16 @@
+.gpt-promotion {
+  display: none !important;
+}
+
+div.modal-header > h4.modal-title {
+  user-select: text;
+}
+div.modal-header > h4.modal-title div + div {
+  user-select: none;
+}
+
+body > div#a-page img {
+  mix-blend-mode: unset !important;
+}
+
+/*# sourceMappingURL=style.css.map */

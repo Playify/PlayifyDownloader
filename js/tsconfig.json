@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"module":"ESNext",
+		"target":"ESNext",
+		"sourceMap":true,
+		"alwaysStrict":true,
+		"noImplicitAny":true,
+		"strictBindCallApply":true,
+		"noImplicitReturns":true,
+		"noImplicitThis":false,
+		"diagnostics":true,
+		"allowSyntheticDefaultImports":true
+	},
+	"compileOnSave":true
+}

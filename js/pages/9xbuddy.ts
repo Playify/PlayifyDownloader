@@ -1,0 +1,141 @@
+console.log("[PlayifyDownloader] 9xbuddy loaded");
+
+/*
+let currInterval=setInterval(function(){
+	let element: HTMLElement;
+	element=<HTMLElement>document.evaluate("//button/div[text()='Options']",document,
+		null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;
+	if(!element) return
+	
+	element.click();
+	clearInterval(currInterval);
+	
+	const hash=decodeURIComponent(document.location.hash.replace(/^#/,""));
+	if(hash=="")return;//No Filename selected
+
+	currInterval=setInterval(changeFileName,10,hash);
+},100);
+
+function changeFileName(name:string){
+	const input=<HTMLInputElement>document.getElementById("input_name");
+	if(!input) return;
+
+
+	let arr:HTMLAnchorElement[]=[];
+	const result=document.evaluate("//span[text()='Download Now']/parent::a",document,
+		null,XPathResult.ORDERED_NODE_ITERATOR_TYPE ,null);
+	for(let node=result.iterateNext();node;node=result.iterateNext())
+		arr.push(<HTMLAnchorElement>node);
+	
+	if(arr.length==0){
+		console.log("No Download button found");
+		return;
+	}
+	
+	const last=arr[arr.length-1];
+	
+	let url=last.href;
+	url=url.replace(/&customName=.*$/ig,"");
+	url+="customName="+encodeURIComponent(name);
+
+
+	chrome.runtime.sendMessage({
+		action:'download',
+		url,
+		title:name,
+		name
+	});
+	
+	
+	setTimeout(()=>{
+
+		input.focus();
+		input.value=name;
+		input.blur();		
+	},100)
+
+	
+	clearInterval(currInterval);
+}
+*/
+
+function wait(t: number): Promise<true>{
+	return new Promise(r=>setTimeout(r,t,true));
+}
+
+(async function handle9xBuddy(){
+
+
+	console.log("[PlayifyDownloader] filling in name")
+
+	const getButton=()=>document.querySelector<HTMLElement>("button.w-full.flex");
+	const getText=()=>document.getElementById("input_name") as HTMLInputElement;
+
+	await wait(100);
+	let text=getText();
+	let button: HTMLElement;
+	if(!text){
+		do button=getButton();
+		while(!button&& await wait(100));
+		button.click();
+		await wait(0);
+
+		do text=getText();
+		while(!text&& await wait(100));
+	}//else button=getButton();
+
+	text.focus();
+	let usesFallback=false;
+	let name=decodeURIComponent(document.location.hash.replace(/^#/,""));
+	if(name) text.value=name;
+	else{
+		name=text.value.replace(/_?\[quality]/ig,"");
+		usesFallback=true;
+	}
+	text.blur();
+
+	console.log("[PlayifyDownloader] gettings download links")
+
+	let anchors: NodeListOf<HTMLAnchorElement>;
+	do anchors=document.querySelectorAll<HTMLAnchorElement>("a.w-full");
+	while(!anchors.length&&await wait(100));
+
+	for(let a of anchors){
+		const url=new URL(a.href);
+		if(url.searchParams.has("customName")){
+			url.searchParams.set("customName",name);
+			a.href=url.toString();
+		}
+	}
+
+	const anchor=getBestLink(anchors);
+
+	if(!anchor){
+		console.warn("[PlayifyDownloader] error finding a download link");
+		return;
+	}
+
+	let url=anchor.href;
+	console.log("[PlayifyDownloader] Found download link: ",url)
+
+	await chrome.runtime.sendMessage({
+		action:'download',
+		url,
+		title:usesFallback?null:name,
+		name
+	});
+
+
+})().catch(console.error);
+
+function getBestLink(anchors: NodeListOf<HTMLAnchorElement>){
+	//Find 9xbuddy link
+	for(let anchor of anchors)
+		if(new URL(anchor.href).hostname.endsWith("9xbud.com"))
+			return anchor;
+	//Otherwise find any link
+	for(let anchor of anchors)
+		if(anchor.href)
+			return anchor;
+	return null;
+}
