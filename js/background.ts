@@ -70,10 +70,9 @@ async function getNameFromUrl(tab:Tab,long:boolean):Promise<string>{
 		case "aniworld.to":
 		case "serien.sx":
 		case "s.to":{
-			//TODO filme
-			const match=url.pathname.match(/^\/(serie|anime)\/stream\/[^/]*\/staffel-([0-9]+)\/episode-([0-9]+)/i);
+			const match=url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/staffel-([0-9]+)\/episode-([0-9]+)/i);
 			if(match) return long?`S${match[1]}E${match[2]}`:match[2];
-			const matchFilm=url.pathname.match(/^\/(serie|anime)\/stream\/[^/]*\/filme\/film-([0-9]+)/i);
+			const matchFilm=url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/filme\/film-([0-9]+)/i);
 			if(matchFilm) return await runRemote(tab.id,()=>{
 				return document.querySelector(".episodeGermanTitle,.episodeEnglishTitle").textContent;
 			});
@@ -243,7 +242,7 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			document.body.append(a);
 		},msg.url);
 	},
-	rightclick:async(msg:Message,sender:MessageSender)=>{
+	rightclick:async(_:Message,sender:MessageSender)=>{
 		await runRemoteFrame(sender.tab.id,sender.frameId,()=>{
 			console.log("Unblocking Mouse");
 			// unblock contextmenu and more
@@ -272,7 +271,7 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 				document.title="[🖱️] "+document.title
 		});
 	},
-	closeDone:async(msg:Message,sender:chrome.runtime.MessageSender)=>{
+	closeDone:async(_:Message,__:chrome.runtime.MessageSender)=>{
 		for(let tab of await chrome.tabs.query({})){
 			if(tab.title.startsWith("[✔️] ")){
 				await chrome.tabs.remove(tab.id);//TODO check if this will fuck up chrome if its the last tab
