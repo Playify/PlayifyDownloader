@@ -63,15 +63,19 @@ function wait(t) {
 }
 (async function handle9xBuddy() {
     console.log("[PlayifyDownloader] filling in name");
-    const getButton = () => document.querySelector("button.w-full.flex");
     const getText = () => document.getElementById("input_name");
     await wait(100);
     let text = getText();
     let button;
     if (!text) {
-        do
-            button = getButton();
-        while (!button && await wait(100));
+        do {
+            if (document.querySelector(".fa-triangle-exclamation")) {
+                console.log("[PlayifyDownloader] Failed to load, retrying");
+                await wait(1000);
+                location.reload();
+            }
+            button = document.querySelector("button.w-full.flex");
+        } while (!button && await wait(100));
         button.click();
         await wait(0);
         do

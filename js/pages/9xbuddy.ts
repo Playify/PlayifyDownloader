@@ -68,15 +68,20 @@ function wait(t: number): Promise<true>{
 
 	console.log("[PlayifyDownloader] filling in name")
 
-	const getButton=()=>document.querySelector<HTMLElement>("button.w-full.flex");
 	const getText=()=>document.getElementById("input_name") as HTMLInputElement;
 
 	await wait(100);
 	let text=getText();
 	let button: HTMLElement;
 	if(!text){
-		do button=getButton();
-		while(!button&& await wait(100));
+		do{
+			if(document.querySelector(".fa-triangle-exclamation")){
+				console.log("[PlayifyDownloader] Failed to load, retrying")
+				await wait(1000);
+				location.reload();
+			}
+			button=document.querySelector<HTMLElement>("button.w-full.flex");
+		}while(!button&& await wait(100));
 		button.click();
 		await wait(0);
 

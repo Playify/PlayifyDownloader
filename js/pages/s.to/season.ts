@@ -1,5 +1,6 @@
 console.log("[PlayifyDownloader] init season");
 
+// javascript:navigator.clipboard.writeText([...document.querySelectorAll("a:has(strong)")].map(x=>"start \"\" \""+x.href+"\"\n").join("")).catch(alert)
 const a=document.createElement("span");
 a.textContent="[Open all]";
 Object.assign(a.style,{
