@@ -3,18 +3,18 @@ console.log("[PlayifyDownloader] init extractVideo");
 function startEnableRightClick() {
     console.log("[PlayifyDownloader] Enabling RightClick");
     const skip = (e) => e.stopPropagation();
-    document.addEventListener('contextmenu', skip, true);
-    document.addEventListener('mousedown', skip, true);
+    document.addEventListener("contextmenu", skip, true);
+    document.addEventListener("mousedown", skip, true);
     chrome.runtime.sendMessage({
-        action: 'rightclick',
+        action: "rightclick",
     });
 }
-function start9xBuddy(getTitle) {
+function start9xBuddy(title) {
     console.log("[PlayifyDownloader] Redirecting to 9xBuddy");
     chrome.runtime.sendMessage({
-        action: '9xbuddy',
+        action: "9xbuddy",
         url: new URL(document.URL),
-        title: getTitle(),
+        title,
     });
 }
 function startVideoFinder(clickInitialize, getTitle) {
@@ -35,36 +35,39 @@ function startVideoFinder(clickInitialize, getTitle) {
             title
         });
         chrome.runtime.sendMessage({
-            action: 'download',
+            action: "download",
             url,
             title
         });
     }, 10);
 }
 let titleTextContent = document.querySelector("title")?.textContent;
-function startM3U8() {
+function startM3U8(title) {
     new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
             if (new URL(entry.name).pathname.endsWith("/master.m3u8")) {
                 chrome.runtime.sendMessage({
-                    action: 'm3u8',
+                    action: "m3u8",
                     url: entry.name,
+                    title,
                 });
-                const a = document.createElement('a');
+                const a = document.createElement("a");
                 a.href = entry.name;
-                a.textContent = '[M3U8]';
+                a.setAttribute("data-by", "extract");
+                console.log("EXTRACT ", a.href);
+                a.textContent = "[M3U8]";
                 Object.assign(a.style, {
-                    position: 'fixed',
-                    top: '2rem',
-                    left: '0',
-                    zIndex: '99999',
-                    fontSize: '2rem',
-                    color: 'gray'
+                    position: "fixed",
+                    top: "2rem",
+                    left: "0",
+                    zIndex: "99999",
+                    fontSize: "2rem",
+                    color: "gray"
                 });
                 document.body.append(a);
             }
         }
-    }).observe({ entryTypes: ['resource'] });
+    }).observe({ entryTypes: ["resource"] });
 }
 if (titleTextContent == "Streamtape.com" || document.querySelector('meta[name="og:sitename"][content="Streamtape.com"]')) {
     let clickInitialize = setInterval(function clickInit() {
@@ -92,7 +95,7 @@ else if (titleTextContent == "Vidoza") {
         return JSON.parse(match[1]); //must be parsed, because text could contain escaped characters
     });
 }
-else if (document.querySelector('a[href="https://vidoza.net"]') || document.location.host == "vidoza.net") {
+else if (document.querySelector("a[href='https://vidoza.net']") || document.location.host == "vidoza.net") {
     startVideoFinder(null, () => document.querySelector("h1").textContent);
 }
 else if (titleTextContent?.endsWith(" - DoodStream")) { //can only use right click, save as. No alternative found yet
@@ -102,19 +105,17 @@ else if (document.location.host == "www.3donlinefilms.com") { //Auto download wo
     startEnableRightClick();
 }
 else if (document.querySelector("video#voe-player")) { //VOE
-    start9xBuddy(() => {
-        let s = document.querySelector("meta[name='description']")?.getAttribute("content");
-        s ??= titleTextContent;
-        s = s.replace(/(at VOE| - VOE \|.*?)$/, "");
-        return s;
-    });
-    startM3U8();
+    let title = document.querySelector("meta[name='description']")?.getAttribute("content");
+    title ??= titleTextContent;
+    title = title.replace(/(at VOE| - VOE \|.*?)$/, "");
+    start9xBuddy(title);
+    startM3U8(title);
 }
 else if (titleTextContent?.startsWith("StreamZZ.to ")) { //StreamZ.ws
     startVideoFinder(null, () => titleTextContent.substring("StreamZZ.to ".length));
 }
 else if (document.location.host == "upstream.to") {
-    start9xBuddy(() => null);
+    start9xBuddy(null);
 }
 else if (document.location.host == "mixdrop.co") {
     let clickInitialize = setInterval(function clickInit() {

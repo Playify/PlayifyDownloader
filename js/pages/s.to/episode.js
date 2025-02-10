@@ -3,8 +3,8 @@ console.log("[PlayifyDownloader] init episode");
 new MutationObserver(list => {
     for (const mutation of list)
         for (const node of mutation.addedNodes)
-            if (node.tagName === 'IFRAME' && node.hasAttribute("allowfullscreen")) {
-                node.src = 'about:blank'; //Default to blank
+            if (node.tagName === "IFRAME" && node.hasAttribute("allowfullscreen")) {
+                node.src = "about:blank"; //Default to blank
                 new MutationObserver((iframeMutations, observer) => {
                     if (iframeMutations.every(m => m.attributeName != "src"))
                         return;

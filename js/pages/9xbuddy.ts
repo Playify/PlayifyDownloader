@@ -124,7 +124,7 @@ function wait(t: number): Promise<true>{
 	console.log("[PlayifyDownloader] Found download link: ",url)
 
 	await chrome.runtime.sendMessage({
-		action:'download',
+		action:"download",
 		url,
 		title:usesFallback?null:name,
 		name
