@@ -50,34 +50,6 @@ function startVideoFinder(clickInitialize: number,getTitle:()=>string){
 
 let titleTextContent=document.querySelector("title")?.textContent;
 
-function startM3U8(title:string){
-	new PerformanceObserver((list)=>{
-		for(const entry of list.getEntries()){
-			if(new URL(entry.name).pathname.endsWith("/master.m3u8")){
-				chrome.runtime.sendMessage({
-					action:"m3u8",
-					url:entry.name,
-					title,
-				});
-				const a=document.createElement("a");
-				a.href=entry.name;
-				a.setAttribute("data-by","extract");
-				console.log("EXTRACT ",a.href);
-				a.textContent="[M3U8]";
-				Object.assign(a.style,{
-					position:"fixed",
-					top:"2rem",
-					left:"0",
-					zIndex:"99999",
-					fontSize:"2rem",
-					color:"gray"
-				});
-				document.body.append(a);
-			}
-		}
-	}).observe({ entryTypes: ["resource"] });
-}
-
 if(titleTextContent=="Streamtape.com"||document.querySelector('meta[name="og:sitename"][content="Streamtape.com"]')){
 	let clickInitialize=setInterval(function clickInit(){
 			(document.querySelector("[data-name='stitialer']+div") as HTMLElement)?.click();
@@ -118,7 +90,7 @@ else if(document.querySelector("video#voe-player")){//VOE
 	title=title.replace(/(at VOE| - VOE \|.*?)$/,"")
 	
 	start9xBuddy(title);
-	startM3U8(title);
+	//startM3U8(title); //will be handled by extractM3u8 file, as the listener needs to be attached in document_start and the logic in here needs the body to be already loaded
 }
 else if(titleTextContent?.startsWith("StreamZZ.to ")){//StreamZ.ws
 	startVideoFinder(null,()=>titleTextContent.substring("StreamZZ.to ".length));

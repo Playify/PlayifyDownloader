@@ -17,25 +17,9 @@ function onDocumentReady(url:string){
 	title??=document.querySelector("title")?.textContent;
 	title=title.replace(/(at VOE| - VOE \|.*?)$/,"")
 	
-	
-	
 	chrome.runtime.sendMessage({
 		action:"m3u8",
 		url,
 		title,
 	});
-	const a=document.createElement("a");
-	a.href=url;
-	a.setAttribute("data-by","extractM3u8");
-	console.log("EXTRACT ",a.href);
-	a.textContent="[M3U8]";
-	Object.assign(a.style,{
-		position:"fixed",
-		top:"2rem",
-		left:"0",
-		zIndex:"99999",
-		fontSize:"2rem",
-		color:"gray"
-	});
-	document.body.append(a);
 }
