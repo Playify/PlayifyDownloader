@@ -1,16 +1,16 @@
 new PerformanceObserver((list)=>{
 	for(const entry of list.getEntries()){
 		if(new URL(entry.name).pathname.endsWith("/master.m3u8")){
-			if(document.readyState=="complete") onDocumentReady(entry.name);
+			if(document.readyState=="complete") onM3u8andDocumentReady(entry.name);
 			document.addEventListener("readystatechange",()=>{
-				if(document.readyState=="complete") onDocumentReady(entry.name);
+				if(document.readyState=="complete") onM3u8andDocumentReady(entry.name);
 			});
 		}
 	}
 }).observe({ entryTypes: ["resource"] });
 
 
-function onDocumentReady(url:string){
+function onM3u8andDocumentReady(url:string){
 	if(!document.querySelector<HTMLMetaElement>("meta[name='og:url']")?.content?.startsWith("https://voe.sx/"))return;
 	
 	let title=document.querySelector("meta[name='description']")?.getAttribute("content");
@@ -23,3 +23,9 @@ function onDocumentReady(url:string){
 		title,
 	});
 }
+
+
+
+
+document.addEventListener("playifyDownloader",(evt:Event&{detail:Message})=>
+	evt.detail&&chrome.runtime.sendMessage(evt.detail));

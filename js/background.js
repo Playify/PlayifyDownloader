@@ -26,6 +26,24 @@ async function runRemoteAndInFrame(tabId, frameId, func, arg) {
         runRemoteFrame(tabId, frameId, func, arg),
     ]);
 }
+const Emoji = {
+    Checked: "✔️",
+    Cross: "❌",
+    Mouse: "🖱️",
+};
+async function setEmoji(tabId, emoji) {
+    try {
+        await runRemote(tabId, emoji => {
+            if (!document.title.startsWith(`[${emoji}] `)) // noinspection RegExpDuplicateCharacterInClass
+                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]] )+/g, "")}`;
+        }, emoji);
+    }
+    catch (e) {
+        //Don't care if tab is already closed
+        if (!e.message.startsWith("No tab with id: "))
+            throw e;
+    }
+}
 //endregion
 //region file name
 async function findFileName(msg, sender) {
@@ -101,7 +119,12 @@ chrome.runtime.onInstalled.addListener(() => chrome.declarativeNetRequest.update
     ],
     removeRuleIds: [1]
 }).catch(console.error));
-chrome.runtime.onMessage.addListener(async (msg, sender) => await messageReceiver[msg.action](msg, sender));
+chrome.runtime.onMessage.addListener(async (msg, sender) => {
+    if (msg.action in messageReceiver)
+        await messageReceiver[msg.action](msg, sender);
+    else
+        console.error("Received invalid message: ", msg, sender);
+});
 const messageReceiver = {
     download: async (msg, sender) => {
         let filename = await findFileName(msg, sender);
@@ -113,40 +136,30 @@ const messageReceiver = {
             filename: filename,
         }, async (downloadId) => {
             chrome.downloads.onChanged.addListener(function onChangeListener(delta) {
-                if (!(delta.id == downloadId && delta.state?.current == "complete"))
+                if (delta.id != downloadId)
                     return;
-                chrome.downloads.onChanged.removeListener(onChangeListener);
-                chrome.downloads.search({ id: downloadId }, ([res]) => res?.fileSize == 0 && res?.exists &&
-                    chrome.downloads.removeFile(downloadId, async () => {
-                        console.info("deleted 0 byte file", {
-                            downloadId,
-                            filename,
-                            res,
-                        });
-                        try {
-                            await runRemote(sender.tab.id, () => {
-                                if (!document.title.startsWith("[❌] "))
-                                    document.title = "[❌] " + document.title.replace(/^(\[(✔️|❌)] )+/g, "");
+                if (delta.error?.current || delta.state?.current == "interrupted") {
+                    console.warn("Download failed: ", delta.error?.current, {
+                        downloadId,
+                        filename,
+                    });
+                    setEmoji(sender.tab.id, Emoji.Cross);
+                }
+                if (delta.state?.current != "in_progress") {
+                    chrome.downloads.onChanged.removeListener(onChangeListener);
+                    chrome.downloads.search({ id: downloadId }, ([res]) => res?.fileSize == 0 && res?.exists &&
+                        chrome.downloads.removeFile(downloadId, async () => {
+                            console.info("deleted 0 byte file", {
+                                downloadId,
+                                filename,
+                                res,
                             });
-                        }
-                        catch (e) {
-                            //Don't care if tab is already closed
-                            if (!e.message.startsWith("No tab with id: "))
-                                throw e;
-                        }
-                    }));
+                            await setEmoji(sender.tab.id, Emoji.Cross);
+                            await messageReceiver.ffmpeg(msg, sender);
+                        }));
+                }
             });
-            try {
-                await runRemote(sender.tab.id, () => {
-                    if (!document.title.startsWith("[✔️] "))
-                        document.title = "[✔️] " + document.title;
-                });
-            }
-            catch (e) {
-                //Don't care if tab is already closed
-                if (!e.message.startsWith("No tab with id: "))
-                    throw e;
-            }
+            await setEmoji(sender.tab.id, Emoji.Checked);
             console.table({
                 url: msg.url,
                 filename,
@@ -199,6 +212,7 @@ const messageReceiver = {
             "#" + encodeURIComponent(filename));
     },
     m3u8: async (msg, sender) => {
+        const isNativeSupported = sendNative({ action: "close" }).then(r => r == "close").catch(() => false);
         const filename = await findFileName(msg, sender);
         console.table({
             action: "m3u8",
@@ -206,40 +220,44 @@ const messageReceiver = {
             filename,
             msg
         });
-        await runRemoteAndInFrame(sender.tab.id, sender.frameId, ([href, filename]) => {
-            const a = document.createElement("a");
-            a.href = href;
-            a.textContent = "[M3U8]";
-            Object.assign(a.style, {
-                position: "fixed",
-                top: "2rem",
-                left: "0",
-                zIndex: "99999",
-                fontSize: "2rem",
-                color: "gray"
-            });
-            document.body.append(a);
-            //TODO maybe add config option, if "start" should be used or "ffmpeg" directly
-            const command = `start "${filename}   " cmd /c ffmpeg -i "${href}" -c copy "${filename}.mp4"`;
-            const span = document.createElement("span");
-            span.title = filename;
-            span.onclick = () => {
+        await runRemoteAndInFrame(sender.tab.id, sender.frameId, ({ url, filename, nativeSupported, }) => {
+            function copy(s) {
                 const input = document.createElement("textarea");
                 document.body.appendChild(input);
-                input.value = command + "\n";
+                //TODO maybe add config option, if "start" should be used or "ffmpeg" directly
+                input.value = s;
                 input.select();
                 // noinspection JSDeprecatedSymbols
                 document.execCommand("copy");
                 document.body.removeChild(input);
-                span.style.textShadow = "2px 2px lime";
-                setTimeout(() => {
-                    span.style.textShadow = null;
-                }, 500);
+            }
+            const a = document.createElement("a");
+            a.href = url;
+            a.title = "Shift = Copy command to run directly\n" +
+                "Ctrl = Copy command to run in new window\n" +
+                "Right Click, copy link = Copy m3u8 link";
+            a.onclick = e => {
+                e.preventDefault();
+                if (e.shiftKey)
+                    copy(`ffmpeg -i "${url}" -c copy "${filename}.mp4"\n`);
+                else if (nativeSupported && !e.ctrlKey) {
+                    document.dispatchEvent(new CustomEvent("playifyDownloader", {
+                        detail: {
+                            action: "ffmpeg",
+                            url: url,
+                            title: filename,
+                        }
+                    }));
+                }
+                else
+                    copy(`start "${filename} - PlayifyDownloader" cmd /c ffmpeg -i "${url}" -c copy "${filename}.mp4"\n`);
+                a.style.textShadow = "2px 2px lime";
+                setTimeout(() => a.style.textShadow = null, 500);
             };
-            span.textContent = "[FFmpeg]";
-            Object.assign(span.style, {
+            a.textContent = "[FFmpeg]";
+            Object.assign(a.style, {
                 position: "fixed",
-                top: "4rem",
+                top: "2rem",
                 left: "0",
                 zIndex: "99999",
                 fontSize: "2rem",
@@ -247,8 +265,12 @@ const messageReceiver = {
                 cursor: "pointer",
                 "color-scheme": "light dark"
             });
-            document.body.append(span);
-        }, [msg.url, filename]);
+            document.body.append(a);
+        }, {
+            url: msg.url,
+            filename,
+            nativeSupported: await isNativeSupported
+        });
     },
     rightclick: async (_, sender) => {
         await runRemoteFrame(sender.tab.id, sender.frameId, () => {
@@ -263,16 +285,39 @@ const messageReceiver = {
                 set: c => console.info('a try to overwrite "returnValue"', c),
             });
         });
-        await runRemote(sender.tab.id, () => {
-            if (!document.title.startsWith("[🖱️] "))
-                document.title = "[🖱️] " + document.title;
-        });
+        await setEmoji(sender.tab.id, Emoji.Mouse);
     },
     closeDone: async (_, __) => {
         for (let tab of await chrome.tabs.query({}))
             if (tab.title.startsWith("[✔️] "))
                 await chrome.tabs.remove(tab.id); //TODO check if this will fuck up chrome if its the last tab
     },
+    ffmpeg: async (msg, sender) => {
+        const filename = await findFileName(msg, sender);
+        console.table({
+            action: "ffmpeg",
+            url: msg.url,
+            filename,
+            msg
+        });
+        let s;
+        try {
+            s = await sendNative({
+                action: "ffmpeg",
+                url: msg.url,
+                filename,
+            });
+            if (s != "started") {
+                console.error("error calling native ffmpeg. Got response: ", s);
+                return;
+            }
+        }
+        catch (e) {
+            console.error("error calling native ffmpeg", e);
+        }
+        await setEmoji(sender.tab.id, Emoji.Checked);
+    }
 };
+const sendNative = (msg) => new Promise((res, rej) => chrome.runtime.sendNativeMessage("at.playify.playifydownloader", msg, r => r == undefined ? rej(chrome.runtime.lastError) : res(r)));
 //endregion
 //# sourceMappingURL=background.js.map
