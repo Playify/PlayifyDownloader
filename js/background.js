@@ -292,7 +292,7 @@ const messageReceiver = {
     closeDone: async (_, __) => {
         for (let tab of await chrome.tabs.query({}))
             if (tab.title.startsWith("[✔️] "))
-                await chrome.tabs.remove(tab.id); //TODO check if this will fuck up chrome if its the last tab
+                await chrome.tabs.remove(tab.id);
     },
     ffmpeg: async (msg, sender) => {
         const filename = await findFileName(msg, sender);

@@ -5,5 +5,5 @@ for (let button of document.querySelectorAll("button[data-action]")) {
 }
 const useFFmpeg = document.querySelector("#useFFmpeg");
 chrome.storage.local.get("useFFmpeg").then(b => useFFmpeg.checked = b.useFFmpeg);
-useFFmpeg.addEventListener("click", () => chrome.storage.local.set({ useFFmpeg: useFFmpeg }));
+useFFmpeg.addEventListener("click", () => chrome.storage.local.set({ useFFmpeg: useFFmpeg.checked }));
 //# sourceMappingURL=popup.js.map
