@@ -50,7 +50,7 @@ async function setEmoji(tabId:number,emoji:string){
 	try{
 		await runRemote(tabId,emoji=>{
 			if(!document.title.startsWith(`[${emoji}] `))// noinspection RegExpDuplicateCharacterInClass
-				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]] )+/g,"")}`;
+				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]+] )+/g,"")}`;
 		},emoji);
 	}catch(e){
 		//Don't care if tab is already closed
@@ -224,23 +224,28 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			msg
 		});
 
+
+		const url="https://9xbuddy.com/process?url="+encodeURIComponent(sender.url)+
+			"#"+encodeURIComponent(filename);
+
 		await runRemoteAndInFrame(sender.tab.id,sender.frameId,url=>{
-				const a=document.createElement("a");
-				a.href=url;
-				a.textContent="[9xBuddy]";
-				Object.assign(a.style,{
-					position:"fixed",
-					top:"0",
-					left:"0",
-					zIndex:"99999",
-					fontSize:"2rem",
-					color:"blue"
-				});
-				document.body.append(a);
+			const a=document.createElement("a");
+			a.href=url;
+			a.textContent="[9xBuddy]";
+			Object.assign(a.style,{
+				position:"fixed",
+				top:"0",
+				left:"0",
+				zIndex:"99999",
+				fontSize:"2rem",
+				color:"blue"
+			});
+			document.body.append(a);
+		},url);
 
-
-				if(window.parent!=window) return;//only add the iframe to the main window, and not on the sub window
-
+		if(msg.title==null||//It is null, when not coming from voe
+			!(await chrome.storage.local.get("useFFmpeg")).useFFmpeg)
+			await runRemote(sender.tab.id,url=>{
 				document.querySelector("iframe.playifyDownloader")?.remove();
 				const iframe=document.createElement("iframe");
 				iframe.classList.add("playifyDownloader");
@@ -253,10 +258,7 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 					overflow:"hidden"
 				});
 				document.body.append(iframe);
-			},
-			"https://9xbuddy.com/process?url="+encodeURIComponent(sender.url)+
-			"#"+encodeURIComponent(filename)
-		);
+			},url);
 	},
 	m3u8:async(msg:Message,sender:MessageSender)=>{
 		const isNativeSupported=sendNative({action:"close"}).then(r=>r=="close").catch(()=>false);
@@ -278,7 +280,6 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			function copy(s:string){
 				const input=document.createElement("textarea");
 				document.body.appendChild(input);
-				//TODO maybe add config option, if "start" should be used or "ffmpeg" directly
 				input.value=s;
 				input.select();
 				// noinspection JSDeprecatedSymbols
@@ -289,14 +290,14 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			const a=document.createElement("a");
 			a.href=url;
 			a.title="Shift = Copy command to run directly\n"+
-				"Ctrl = Copy command to run in new window\n" +
+				"Ctrl = Copy command to run in new window\n"+
 				"Right Click, copy link = Copy m3u8 link";
 			a.onclick=e=>{
 				e.preventDefault();
 
 				if(e.shiftKey)
 					copy(`ffmpeg -i "${url}" -c copy "${filename}.mp4"\n`);
-				else if(nativeSupported&&!e.ctrlKey){
+				else if(nativeSupported&& !e.ctrlKey){
 					document.dispatchEvent(new CustomEvent("playifyDownloader",{
 						detail:{
 							action:"ffmpeg",

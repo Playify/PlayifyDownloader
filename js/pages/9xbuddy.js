@@ -111,7 +111,7 @@ function wait(t) {
     }
     let url = anchor.href;
     console.log("[PlayifyDownloader] Found download link: ", url);
-    await chrome.runtime.sendMessage({
+    chrome.runtime.sendMessage({
         action: "download",
         url,
         title: usesFallback ? null : name,

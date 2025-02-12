@@ -16,7 +16,8 @@
 		"declarativeNetRequestWithHostAccess",
 		"activeTab",
 		"scripting",
-		"nativeMessaging"
+		"nativeMessaging",
+		"storage"
 	],
 	"host_permissions": [
 		"*://9xbuddy.com/*",

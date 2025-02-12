@@ -1,3 +1,8 @@
-<!DOCTYPE html><html><head><style>button{
+<!DOCTYPE html><html><head><style>body{
+	min-width: 120px;
+}
+button,label{
 	width: 100%;
-}</style></head><body><button data-action="closeDone">Close done</button><script src="js/popup.js"></script></body></html>
+	user-select: none;
+	margin-bottom: 8px;
+}</style></head><body><button data-action="closeDone">Close done</button><label><input id="useFFmpeg" type="checkbox">Use FFMpeg instead of 9xBuddy for VOE</label><script src="js/popup.js"></script></body></html>

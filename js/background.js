@@ -35,7 +35,7 @@ async function setEmoji(tabId, emoji) {
     try {
         await runRemote(tabId, emoji => {
             if (!document.title.startsWith(`[${emoji}] `)) // noinspection RegExpDuplicateCharacterInClass
-                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]] )+/g, "")}`;
+                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]+] )+/g, "")}`;
         }, emoji);
     }
     catch (e) {
@@ -181,6 +181,8 @@ const messageReceiver = {
             tabTitle: sender.tab.title,
             msg
         });
+        const url = "https://9xbuddy.com/process?url=" + encodeURIComponent(sender.url) +
+            "#" + encodeURIComponent(filename);
         await runRemoteAndInFrame(sender.tab.id, sender.frameId, url => {
             const a = document.createElement("a");
             a.href = url;
@@ -194,22 +196,23 @@ const messageReceiver = {
                 color: "blue"
             });
             document.body.append(a);
-            if (window.parent != window)
-                return; //only add the iframe to the main window, and not on the sub window
-            document.querySelector("iframe.playifyDownloader")?.remove();
-            const iframe = document.createElement("iframe");
-            iframe.classList.add("playifyDownloader");
-            iframe.src = url;
-            Object.assign(iframe.style, {
-                height: "80vh",
-                width: "100%",
-                border: "none",
-                borderTop: "4px solid red",
-                overflow: "hidden"
-            });
-            document.body.append(iframe);
-        }, "https://9xbuddy.com/process?url=" + encodeURIComponent(sender.url) +
-            "#" + encodeURIComponent(filename));
+        }, url);
+        if (msg.title == null || //It is null, when not coming from voe
+            !(await chrome.storage.local.get("useFFmpeg")).useFFmpeg)
+            await runRemote(sender.tab.id, url => {
+                document.querySelector("iframe.playifyDownloader")?.remove();
+                const iframe = document.createElement("iframe");
+                iframe.classList.add("playifyDownloader");
+                iframe.src = url;
+                Object.assign(iframe.style, {
+                    height: "80vh",
+                    width: "100%",
+                    border: "none",
+                    borderTop: "4px solid red",
+                    overflow: "hidden"
+                });
+                document.body.append(iframe);
+            }, url);
     },
     m3u8: async (msg, sender) => {
         const isNativeSupported = sendNative({ action: "close" }).then(r => r == "close").catch(() => false);
@@ -224,7 +227,6 @@ const messageReceiver = {
             function copy(s) {
                 const input = document.createElement("textarea");
                 document.body.appendChild(input);
-                //TODO maybe add config option, if "start" should be used or "ffmpeg" directly
                 input.value = s;
                 input.select();
                 // noinspection JSDeprecatedSymbols

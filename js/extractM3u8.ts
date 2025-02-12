@@ -22,8 +22,13 @@ function onM3u8andDocumentReady(url:string){
 		url,
 		title,
 	});
-}
 
+	chrome.storage.local.get("useFFmpeg").then(b=>b.useFFmpeg&&chrome.runtime.sendMessage({
+		action:"ffmpeg",
+		url,
+		title,
+	}));
+}
 
 
 

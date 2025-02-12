@@ -2,10 +2,19 @@ doctype html
 html
 	head
 		style.
-			button{
+			body{
+				min-width: 120px;
+			}
+			button,label{
 				width: 100%;
+				user-select: none;
+				margin-bottom: 8px;
 			}
 	body
 		button(data-action="closeDone") Close done
+		
+		label
+			input#useFFmpeg(type="checkbox")
+			| Use FFMpeg instead of 9xBuddy for VOE
 		
 		script(src="js/popup.js")

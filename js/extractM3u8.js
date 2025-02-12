@@ -22,6 +22,11 @@ function onM3u8andDocumentReady(url) {
         url,
         title,
     });
+    chrome.storage.local.get("useFFmpeg").then(b => b.useFFmpeg && chrome.runtime.sendMessage({
+        action: "ffmpeg",
+        url,
+        title,
+    }));
 }
 document.addEventListener("playifyDownloader", (evt) => evt.detail && chrome.runtime.sendMessage(evt.detail));
 //# sourceMappingURL=extractM3u8.js.map
