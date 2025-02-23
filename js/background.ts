@@ -63,7 +63,11 @@ async function setEmoji(tabId:number,emoji:string){
 
 //region file name
 async function findFileName(msg:Message,sender:MessageSender){
-	let s=msg.name;
+	let s:string=null;
+	if(sender.origin=="https://9xbuddy.com")
+		s=decodeURIComponent(new URL(sender.url).hash.substring(1))||null;
+	
+	
 	const long=false;
 
 	if(msg.title) s||=getEpisodeNameFromTitle(msg.title,long);
@@ -144,7 +148,6 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 //region Message
 interface Message{
 	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg",
-	name:string,
 	title:string,
 	url:string,
 }

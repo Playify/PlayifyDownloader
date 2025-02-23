@@ -1,6 +1,6 @@
 new PerformanceObserver((list)=>{
 	for(const entry of list.getEntries()){
-		if(new URL(entry.name).pathname.endsWith("/master.m3u8")){
+		if(URL.canParse(entry.name)&&new URL(entry.name).pathname.endsWith("/master.m3u8")){
 			if(document.readyState=="complete") onM3u8andDocumentReady(entry.name);
 			document.addEventListener("readystatechange",()=>{
 				if(document.readyState=="complete") onM3u8andDocumentReady(entry.name);
@@ -15,7 +15,7 @@ function onM3u8andDocumentReady(url:string){
 	
 	let title=document.querySelector("meta[name='description']")?.getAttribute("content");
 	title??=document.querySelector("title")?.textContent;
-	title=title.replace(/(at VOE| - VOE \|.*?)$/,"")
+	title=title.replace(/(at VOE| - VOE \|.*?| bei VOE ansehen)$/,"")
 	
 	chrome.runtime.sendMessage({
 		action:"m3u8",

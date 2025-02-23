@@ -1,64 +1,5 @@
 console.log("[PlayifyDownloader] 9xbuddy loaded");
 
-/*
-let currInterval=setInterval(function(){
-	let element: HTMLElement;
-	element=<HTMLElement>document.evaluate("//button/div[text()='Options']",document,
-		null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;
-	if(!element) return
-	
-	element.click();
-	clearInterval(currInterval);
-	
-	const hash=decodeURIComponent(document.location.hash.replace(/^#/,""));
-	if(hash=="")return;//No Filename selected
-
-	currInterval=setInterval(changeFileName,10,hash);
-},100);
-
-function changeFileName(name:string){
-	const input=<HTMLInputElement>document.getElementById("input_name");
-	if(!input) return;
-
-
-	let arr:HTMLAnchorElement[]=[];
-	const result=document.evaluate("//span[text()='Download Now']/parent::a",document,
-		null,XPathResult.ORDERED_NODE_ITERATOR_TYPE ,null);
-	for(let node=result.iterateNext();node;node=result.iterateNext())
-		arr.push(<HTMLAnchorElement>node);
-	
-	if(arr.length==0){
-		console.log("No Download button found");
-		return;
-	}
-	
-	const last=arr[arr.length-1];
-	
-	let url=last.href;
-	url=url.replace(/&customName=.*$/ig,"");
-	url+="customName="+encodeURIComponent(name);
-
-
-	chrome.runtime.sendMessage({
-		action:'download',
-		url,
-		title:name,
-		name
-	});
-	
-	
-	setTimeout(()=>{
-
-		input.focus();
-		input.value=name;
-		input.blur();		
-	},100)
-
-	
-	clearInterval(currInterval);
-}
-*/
-
 function wait(t: number): Promise<true>{
 	return new Promise(r=>setTimeout(r,t,true));
 }
@@ -126,8 +67,7 @@ function wait(t: number): Promise<true>{
 	chrome.runtime.sendMessage({
 		action:"download",
 		url,
-		title:usesFallback?null:name,
-		name
+		title:usesFallback?null:name
 	});
 
 

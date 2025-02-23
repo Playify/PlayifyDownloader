@@ -47,7 +47,9 @@ async function setEmoji(tabId, emoji) {
 //endregion
 //region file name
 async function findFileName(msg, sender) {
-    let s = msg.name;
+    let s = null;
+    if (sender.origin == "https://9xbuddy.com")
+        s = decodeURIComponent(new URL(sender.url).hash.substring(1)) || null;
     const long = false;
     if (msg.title)
         s ||= getEpisodeNameFromTitle(msg.title, long);

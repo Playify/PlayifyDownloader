@@ -80,7 +80,7 @@ else if (document.location.host == "www.3donlinefilms.com") { //Auto download wo
 else if (document.querySelector("video#voe-player")) { //VOE
     let title = document.querySelector("meta[name='description']")?.getAttribute("content");
     title ??= titleTextContent;
-    title = title.replace(/(at VOE| - VOE \|.*?)$/, "");
+    title = title.replace(/(at VOE| - VOE \|.*?| bei VOE ansehen)$/, "");
     start9xBuddy(title);
     //startM3U8(title); //will be handled by extractM3u8 file, as the listener needs to be attached in document_start and the logic in here needs the body to be already loaded
 }
