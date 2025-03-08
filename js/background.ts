@@ -147,7 +147,7 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg"|"3donlinefilms",
 	title:string,
 	url:string,
 }
@@ -376,7 +376,23 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 		}
 
 		await setEmoji(sender.tab.id,Emoji.Checked);
-	}
+	},
+	"3donlinefilms":async(_:Message,sender:MessageSender)=>{
+		await runRemoteAndInFrame(sender.tab.id,sender.frameId,()=>{
+			const a=document.createElement("a");
+			a.href="https://www.3donlinefilms.com/videoTV.php";
+			a.textContent="[Video]";
+			Object.assign(a.style,{
+				position:"fixed",
+				top:"0",
+				left:"0",
+				zIndex:"99999",
+				fontSize:"2rem",
+				color:"blue"
+			});
+			document.body.append(a);
+		});
+	},
 };
 //endregion
 

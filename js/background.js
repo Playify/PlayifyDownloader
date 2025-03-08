@@ -320,7 +320,23 @@ const messageReceiver = {
             console.error("error calling native ffmpeg", e);
         }
         await setEmoji(sender.tab.id, Emoji.Checked);
-    }
+    },
+    "3donlinefilms": async (_, sender) => {
+        await runRemoteAndInFrame(sender.tab.id, sender.frameId, () => {
+            const a = document.createElement("a");
+            a.href = "https://www.3donlinefilms.com/videoTV.php";
+            a.textContent = "[Video]";
+            Object.assign(a.style, {
+                position: "fixed",
+                top: "0",
+                left: "0",
+                zIndex: "99999",
+                fontSize: "2rem",
+                color: "blue"
+            });
+            document.body.append(a);
+        });
+    },
 };
 const sendNative = (msg) => new Promise((res, rej) => chrome.runtime.sendNativeMessage("at.playify.playifydownloader", msg, r => r == undefined ? rej(chrome.runtime.lastError) : res(r)));
 //endregion

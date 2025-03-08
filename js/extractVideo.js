@@ -74,8 +74,11 @@ else if (document.querySelector("a[href='https://vidoza.net']") || document.loca
 else if (titleTextContent?.endsWith(" - DoodStream")) { //can only use right click, save as. No alternative found yet
     startEnableRightClick();
 }
-else if (document.location.host == "www.3donlinefilms.com") { //Auto download would work, but not if multiple tabs of this domain are opened at once, also, it would interfere with browsing
+else if (document.location.href.startsWith("https://www.3donlinefilms.com/video/")) { //Auto download would work, but not if multiple tabs of this domain are opened at once, also, it would interfere with browsing
     startEnableRightClick();
+    chrome.runtime.sendMessage({
+        action: "3donlinefilms",
+    });
 }
 else if (document.querySelector("video#voe-player")) { //VOE
     let title = document.querySelector("meta[name='description']")?.getAttribute("content");
