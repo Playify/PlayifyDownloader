@@ -2,6 +2,7 @@
 new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
         if (URL.canParse(entry.name) && new URL(entry.name).pathname.endsWith("/master.m3u8")) {
+            console.log("[PlayifyDownloader] found M3u8 link (document is " + document.readyState + ")");
             if (document.readyState == "complete")
                 onM3u8andDocumentReady(entry.name);
             document.addEventListener("readystatechange", () => {
@@ -12,7 +13,7 @@ new PerformanceObserver((list) => {
     }
 }).observe({ entryTypes: ["resource"] });
 function onM3u8andDocumentReady(url) {
-    if (!document.querySelector("meta[name='og:url']")?.content?.startsWith("https://voe.sx/"))
+    if (!document.querySelector("meta[name='keywords']")?.content?.includes("VOE"))
         return;
     let title = document.querySelector("meta[name='description']")?.getAttribute("content");
     title ??= document.querySelector("title")?.textContent;
