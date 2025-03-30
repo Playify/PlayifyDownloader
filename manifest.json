@@ -59,6 +59,13 @@
 			"js":["js/pages/s.to/season.js"],
 			"run_at":"document_idle"
 		},
+		{
+			"matches":[
+				"https://filmpalast.to/*"
+			],
+			"js":["js/pages/filmpalast.js"],
+			"run_at":"document_idle"
+		},
 
 
 		{

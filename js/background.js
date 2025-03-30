@@ -97,6 +97,9 @@ async function getNameFromUrl(tab, long) {
         case "streamkiste.tv": {
             return await runRemote(tab.id, () => document.querySelector("div.title>h1").textContent);
         }
+        case "filmpalast.to": {
+            return await runRemote(tab.id, () => document.querySelector("h2").textContent);
+        }
         case "megakino.co": {
             return await runRemote(tab.id, () => document.querySelector("header>h1:first-child")?.textContent);
         }
@@ -335,6 +338,18 @@ const messageReceiver = {
                 color: "blue"
             });
             document.body.append(a);
+        });
+    },
+    "filmpalast": async (_, sender) => {
+        await runRemoteAndInFrame(sender.tab.id, sender.frameId, () => {
+            const oldJquery = globalThis.jQuery;
+            globalThis.jQuery = new Proxy(oldJquery, {
+                apply(target, thisArg, argArray) {
+                    if (argArray[0] == '.verystream')
+                        throw "[PlayifyDownloader] Interval";
+                    target.apply(thisArg, argArray);
+                }
+            });
         });
     },
 };

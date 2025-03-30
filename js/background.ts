@@ -116,6 +116,9 @@ async function getNameFromUrl(tab:Tab,long:boolean):Promise<string>{
 		case "streamkiste.tv":{
 			return await runRemote(tab.id,()=>document.querySelector("div.title>h1").textContent)
 		}
+		case "filmpalast.to":{
+			return await runRemote(tab.id,()=>document.querySelector("h2").textContent)
+		}
 		case "megakino.co":{
 			return await runRemote(tab.id,()=>document.querySelector("header>h1:first-child")?.textContent)
 		}
@@ -147,7 +150,7 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg"|"3donlinefilms",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg"|"3donlinefilms"|"filmpalast",
 	title:string,
 	url:string,
 }
@@ -391,6 +394,25 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 				color:"blue"
 			});
 			document.body.append(a);
+		});
+	},
+	"filmpalast":async(_:Message,sender:MessageSender)=>{
+		await runRemoteAndInFrame(sender.tab.id,sender.frameId,()=>{
+			/*const oldJquery=(globalThis as any).jQuery;
+			(globalThis as any).jQuery=(...args:any[])=>{
+				if(args.length==1&&args[0]==".verystream"){
+					throw "[PlayifyDownloader] Interval";
+				}
+				
+				oldJquery(...args);
+			};*/
+			const oldJquery=(globalThis as any).jQuery;
+			(globalThis as any).jQuery=new Proxy(oldJquery,{
+				apply(target:any,thisArg:any,argArray:any[]):any{
+					if(argArray[0]=='.verystream') throw "[PlayifyDownloader] Interval";
+					target.apply(thisArg,argArray);
+				}
+			});
 		});
 	},
 };
