@@ -16,7 +16,8 @@ new MutationObserver(list=>{
 
 function loadBestHost(iframe:HTMLIFrameElement){
 	const hosts=[
-		"Streamtape","Vidoza","VOE"
+		//"Streamtape","Vidoza","VOE"
+		"VOE"
 	];
 
 	for(let host of hosts){

@@ -46,14 +46,19 @@ async function setEmoji(tabId, emoji) {
 }
 //endregion
 //region file name
-async function findFileName(msg, sender) {
+var NameVariant;
+(function (NameVariant) {
+    NameVariant[NameVariant["NamedSeriesWithFolders"] = 2] = "NamedSeriesWithFolders";
+    NameVariant[NameVariant["SeriesEpisode"] = 1] = "SeriesEpisode";
+    NameVariant[NameVariant["JustName"] = 0] = "JustName";
+})(NameVariant || (NameVariant = {}));
+async function findFileName(msg, sender, variant = NameVariant.JustName) {
     let s = null;
     if (sender.origin == "https://9xbuddy.com")
         s = decodeURIComponent(new URL(sender.url).hash.substring(1)) || null;
-    const long = false;
+    s ||= await getNameFromUrl(sender.tab, variant);
     if (msg.title)
-        s ||= getEpisodeNameFromTitle(msg.title, long);
-    s ||= await getNameFromUrl(sender.tab, long);
+        s ||= getEpisodeNameFromTitle(msg.title, variant);
     s ||= msg.title;
     if (s == null) {
         console.log("[PlayifyDownloader] didn't find name for ", msg);
@@ -66,29 +71,54 @@ async function findFileName(msg, sender) {
         .trim();
     return s;
 }
-function getEpisodeNameFromTitle(title, long) {
+function getEpisodeNameFromTitle(title, variant) {
     const match = title.match(/S0*([0-9]+)[. ]?E0*([0-9]+)/) ??
         title.match(/E0*([0-9]+)/) ??
         title.match(/\.0*([0-9]{1-3})\./);
-    if (match)
-        return long && match.length == 3 ? `S${match[1]}E${match[2]}` : match[2];
-    return null;
+    if (!match)
+        return null;
+    switch (variant) {
+        case NameVariant.NamedSeriesWithFolders:
+            return match.length == 3 ? `S${match[1]}/${match[2]}` : match[2];
+        case NameVariant.SeriesEpisode:
+            return match.length == 3 ? `S${match[1]}E${match[2]}` : match[2];
+        case NameVariant.JustName:
+        default:
+            return match[2];
+    }
 }
-async function getNameFromUrl(tab, long) {
+async function getNameFromUrl(tab, variant) {
     const url = new URL(tab.url);
     switch (url.host) {
         case "bs.to": {
-            const match = url.pathname.match(/^\/serie\/[^/]*\/([0-9]+)\/([0-9]+)-/i);
-            if (match)
-                return long ? `S${match[1]}E${match[2]}` : match[2];
-            throw new Error("Unknown bs.to path: " + url);
+            const match = url.pathname.match(/^\/serie\/([^/]*)\/([0-9]+)\/([0-9]+)-/i);
+            if (!match)
+                throw new Error("Unknown bs.to path: " + url);
+            switch (variant) {
+                case NameVariant.NamedSeriesWithFolders:
+                    return `${match[1]}/S${match[2]}/${match[3]}`;
+                case NameVariant.SeriesEpisode:
+                    return `S${match[2]}E${match[3]}`;
+                case NameVariant.JustName:
+                default:
+                    return match[3];
+            }
         }
         case "aniworld.to":
         case "serien.sx":
         case "s.to": {
-            const match = url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/staffel-([0-9]+)\/episode-([0-9]+)/i);
-            if (match)
-                return long ? `S${match[1]}E${match[2]}` : match[2];
+            const match = url.pathname.match(/^\/(?:serie|anime)\/stream\/([^/]*)\/staffel-([0-9]+)\/episode-([0-9]+)/i);
+            if (match) {
+                switch (variant) {
+                    case NameVariant.NamedSeriesWithFolders:
+                        return `${match[1]}/S${match[2]}/${match[3]}`;
+                    case NameVariant.SeriesEpisode:
+                        return `S${match[2]}E${match[3]}`;
+                    case NameVariant.JustName:
+                    default:
+                        return match[3];
+                }
+            }
             const matchFilm = url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/filme\/film-([0-9]+)/i);
             if (matchFilm)
                 return await runRemote(tab.id, () => document.querySelector(".episodeGermanTitle,.episodeEnglishTitle").textContent);
@@ -300,7 +330,8 @@ const messageReceiver = {
                 await chrome.tabs.remove(tab.id);
     },
     ffmpeg: async (msg, sender) => {
-        const filename = await findFileName(msg, sender);
+        const useSeriesFolder = (await chrome.storage.local.get("useSeriesFolder")).useSeriesFolder; //TODO use radiobuttons
+        const filename = await findFileName(msg, sender, useSeriesFolder ? NameVariant.NamedSeriesWithFolders : NameVariant.JustName);
         console.table({
             action: "ffmpeg",
             url: msg.url,
@@ -342,6 +373,14 @@ const messageReceiver = {
     },
     "filmpalast": async (_, sender) => {
         await runRemoteAndInFrame(sender.tab.id, sender.frameId, () => {
+            /*const oldJquery=(globalThis as any).jQuery;
+            (globalThis as any).jQuery=(...args:any[])=>{
+                if(args.length==1&&args[0]==".verystream"){
+                    throw "[PlayifyDownloader] Interval";
+                }
+                
+                oldJquery(...args);
+            };*/
             const oldJquery = globalThis.jQuery;
             globalThis.jQuery = new Proxy(oldJquery, {
                 apply(target, thisArg, argArray) {

@@ -15,7 +15,8 @@ new MutationObserver(list => {
 }).observe(document, { childList: true, subtree: true });
 function loadBestHost(iframe) {
     const hosts = [
-        "Streamtape", "Vidoza", "VOE"
+        //"Streamtape","Vidoza","VOE"
+        "VOE"
     ];
     for (let host of hosts) {
         const element = document.querySelector("a:has(.icon." + host + ")");
