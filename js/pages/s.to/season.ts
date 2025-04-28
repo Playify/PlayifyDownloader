@@ -20,7 +20,7 @@ a.onclick=e=>{
 	
 	console.log("[PlayifyDownloader] Starting timers")
 
-	const delay=100;
+	const delay=1000;
 	let currDelay=-delay;
 
 	for(let a of document.querySelectorAll<HTMLAnchorElement>("table.seasonEpisodesList td:first-child>a"))

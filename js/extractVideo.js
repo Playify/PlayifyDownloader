@@ -49,7 +49,7 @@ if (titleTextContent == "Streamtape.com" || document.querySelector('meta[name="o
         if (element) {
             element.click();
             clearInterval(clickInitialize);
-            setInterval(clickInit, 4000); //don't stop yet, maybe the listener was not attached yet, but only refresh not so often
+            clickInitialize = setInterval(clickInit, 4000); //don't stop yet, maybe the listener was not attached yet, but only refresh not so often
         }
     }, 100);
     startVideoFinder(clickInitialize, () => {
@@ -80,10 +80,19 @@ else if (document.location.href.startsWith("https://www.3donlinefilms.com/video/
         action: "3donlinefilms",
     });
 }
-else if (document.querySelector("video#voe-player")) { //VOE
+else if (document.querySelector("meta[name='keywords']")?.content?.includes("VOE")) { //VOE
     let title = document.querySelector("meta[name='description']")?.getAttribute("content");
     title ??= titleTextContent;
     title = title.replace(/(at VOE| - VOE \|.*?| bei VOE ansehen)$/, "");
+    let clickInitialize = setInterval(function clickInit() {
+        const element = document.querySelector(".spin");
+        if (element) {
+            element.click();
+            clearInterval(clickInitialize);
+            document.querySelector("video").pause();
+            return;
+        }
+    }, 100);
     start9xBuddy(title);
     //startM3U8(title); //will be handled by extractM3u8 file, as the listener needs to be attached in document_start and the logic in here needs the body to be already loaded
 }
@@ -99,10 +108,13 @@ else if (document.location.host == "mixdrop.co") {
         if (element) {
             element.click();
             clearInterval(clickInitialize);
-            setInterval(clickInit, 4000); //don't yet stop, maybe the listener was not attached yet, but only refresh not so often
+            clickInitialize = setInterval(clickInit, 4000); //don't yet stop, maybe the listener was not attached yet, but only refresh not so often
             return;
         }
     }, 100);
     startVideoFinder(clickInitialize, () => document.querySelector(".title>a")?.textContent);
+}
+else if (document.location.host == "veev.to") {
+    startVideoFinder(null, () => document.querySelector("meta[name='og:title']")?.getAttribute("content"));
 }
 //# sourceMappingURL=extractVideo.js.map
