@@ -50,7 +50,7 @@ async function setEmoji(tabId:number,emoji:string){
 	try{
 		await runRemote(tabId,emoji=>{
 			if(!document.title.startsWith(`[${emoji}] `))// noinspection RegExpDuplicateCharacterInClass
-				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]+] )+/g,"")}`;
+				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️⌛]+] )+/g,"")}`;
 		},emoji);
 	}catch(e){
 		//Don't care if tab is already closed
@@ -72,7 +72,7 @@ async function findFileName(msg:Message,sender:MessageSender,variant:NameVariant
 	let s:string=null;
 	if(sender.origin=="https://9xbuddy.com")
 		s=decodeURIComponent(new URL(sender.url).hash.substring(1))||null;
-	
+
 
 	s||= await getNameFromUrl(sender.tab,variant);
 	if(msg.title) s||=getEpisodeNameFromTitle(msg.title,variant);
@@ -96,7 +96,7 @@ function getEpisodeNameFromTitle(title:string,variant:NameVariant):string{
 		title.match(/E0*([0-9]+)/)??
 		title.match(/\.0*([0-9]{1-3})\./);
 	if(!match) return null;
-	
+
 	switch(variant){
 		case NameVariant.NamedSeriesWithFolders:
 			return match.length==3?`S${match[1]}/${match[2]}`:match[2];
@@ -181,20 +181,21 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg"|"3donlinefilms"|"filmpalast",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait",
 	title:string,
 	url:string,
 }
 
-chrome.runtime.onMessage.addListener(async(msg:Message,sender)=>{
+chrome.runtime.onMessage.addListener((msg:Message,sender,sendResponse)=>{
 	if(msg.action in messageReceiver)
-		await messageReceiver[msg.action](msg,sender);
+		messageReceiver[msg.action](msg,sender,sendResponse).catch(console.error);
 	else
 		console.error("Received invalid message: ",msg,sender);
+	return msg.action=="wait";//return true if response is used
 });
 
-const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSender)=>Promise<void>>)={
-	download:async(msg:Message,sender:MessageSender)=>{
+const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSender,sendResponse:(response?:any)=>void)=>Promise<void>>)={
+	download:async(msg:Message,sender:MessageSender,sendResponse)=>{
 		let filename=await findFileName(msg,sender);
 		if(filename==null) return;
 		filename+=".mp4";
@@ -230,7 +231,7 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 
 								await setEmoji(sender.tab.id,Emoji.Cross);
 
-								await messageReceiver.ffmpeg(msg,sender);
+								await messageReceiver.ffmpeg(msg,sender,sendResponse);
 							}));
 					}
 				}
@@ -447,18 +448,49 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			});
 		});
 	},
+	"wait":async(_:Message,sender:MessageSender,sendResponse)=>{
+		await waitNative();
+		sendResponse();
+	}
 };
 //endregion
 
 //region Native
 interface NativeMessage{
-	action:"close" | "args" | "ffmpeg" | "version",
+	action:"close" | "args" | "ffmpeg" | "version" | "count",
 	url?:string
 	filename?:string
 }
 
-const sendNative=(msg:NativeMessage)=>new Promise((res,rej)=>
+const sendNative=<T>(msg:NativeMessage)=>new Promise<T>((res,rej)=>
 	chrome.runtime.sendNativeMessage("at.playify.playifydownloader",msg,
 		r=>r==undefined?rej(chrome.runtime.lastError):res(r)));
+
+let waitingNative:VoidFunction[] | null=null;
+const waitNative=async()=>{
+	const maxFfmpeg:number=+(await chrome.storage.local.get("maxFfmpeg")).maxFfmpeg;
+	if(!maxFfmpeg) return;
+	if(waitingNative) return new Promise<void>(res=>waitingNative.push(res));
+
+	waitingNative=[];
+	const promise=new Promise<void>(res=>waitingNative.push(res));
+
+	(async()=>{
+		while(true){
+			for(let count=await sendNative<number>({action:"count"}); count<maxFfmpeg&&waitingNative.length; count++)
+				waitingNative.pop()();
+			if(waitingNative.length==0){
+				waitingNative=null;
+				return;
+			}
+			await new Promise(resolve=>setTimeout(resolve,5000));
+		}
+	})().catch(e=>{
+		console.error(e);
+		waitingNative=null;
+	});
+
+	return promise;
+}
 
 //endregion

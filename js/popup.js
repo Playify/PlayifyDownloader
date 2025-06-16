@@ -9,4 +9,7 @@ useFFmpeg.addEventListener("click", () => chrome.storage.local.set({ useFFmpeg: 
 const useSeriesFolder = document.querySelector("#useSeriesFolder");
 chrome.storage.local.get("useSeriesFolder").then(b => useSeriesFolder.checked = b.useSeriesFolder);
 useSeriesFolder.addEventListener("click", () => chrome.storage.local.set({ useSeriesFolder: useSeriesFolder.checked }));
+const maxFfmpeg = document.querySelector("#maxFfmpeg");
+chrome.storage.local.get("maxFfmpeg").then(b => maxFfmpeg.value = b.maxFfmpeg);
+maxFfmpeg.addEventListener("input", () => chrome.storage.local.set({ maxFfmpeg: maxFfmpeg.value || undefined }));
 //# sourceMappingURL=popup.js.map

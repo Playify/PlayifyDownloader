@@ -35,7 +35,7 @@ async function setEmoji(tabId, emoji) {
     try {
         await runRemote(tabId, emoji => {
             if (!document.title.startsWith(`[${emoji}] `)) // noinspection RegExpDuplicateCharacterInClass
-                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️]+] )+/g, "")}`;
+                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️⌛]+] )+/g, "")}`;
         }, emoji);
     }
     catch (e) {
@@ -154,14 +154,15 @@ chrome.runtime.onInstalled.addListener(() => chrome.declarativeNetRequest.update
     ],
     removeRuleIds: [1]
 }).catch(console.error));
-chrome.runtime.onMessage.addListener(async (msg, sender) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.action in messageReceiver)
-        await messageReceiver[msg.action](msg, sender);
+        messageReceiver[msg.action](msg, sender, sendResponse).catch(console.error);
     else
         console.error("Received invalid message: ", msg, sender);
+    return msg.action == "wait"; //return true if response is used
 });
 const messageReceiver = {
-    download: async (msg, sender) => {
+    download: async (msg, sender, sendResponse) => {
         let filename = await findFileName(msg, sender);
         if (filename == null)
             return;
@@ -190,7 +191,7 @@ const messageReceiver = {
                                 res,
                             });
                             await setEmoji(sender.tab.id, Emoji.Cross);
-                            await messageReceiver.ffmpeg(msg, sender);
+                            await messageReceiver.ffmpeg(msg, sender, sendResponse);
                         }));
                 }
             });
@@ -391,7 +392,36 @@ const messageReceiver = {
             });
         });
     },
+    "wait": async (_, sender, sendResponse) => {
+        await waitNative();
+        sendResponse();
+    }
 };
 const sendNative = (msg) => new Promise((res, rej) => chrome.runtime.sendNativeMessage("at.playify.playifydownloader", msg, r => r == undefined ? rej(chrome.runtime.lastError) : res(r)));
+let waitingNative = null;
+const waitNative = async () => {
+    const maxFfmpeg = +(await chrome.storage.local.get("maxFfmpeg")).maxFfmpeg;
+    if (!maxFfmpeg)
+        return;
+    if (waitingNative)
+        return new Promise(res => waitingNative.push(res));
+    waitingNative = [];
+    const promise = new Promise(res => waitingNative.push(res));
+    (async () => {
+        while (true) {
+            for (let count = await sendNative({ action: "count" }); count < maxFfmpeg && waitingNative.length; count++)
+                waitingNative.pop()();
+            if (waitingNative.length == 0) {
+                waitingNative = null;
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    })().catch(e => {
+        console.error(e);
+        waitingNative = null;
+    });
+    return promise;
+};
 //endregion
 //# sourceMappingURL=background.js.map
