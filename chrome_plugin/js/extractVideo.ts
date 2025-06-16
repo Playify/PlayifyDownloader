@@ -94,13 +94,10 @@ else if(document.querySelector<HTMLMetaElement>("meta[name='keywords']")?.conten
 
 	let clickInitialize=setInterval(function clickInit(){
 		const element:HTMLElement=document.querySelector(".spin");
-		if(element){
-			element.click();
-			clearInterval(clickInitialize);
-			
-			document.querySelector("video").pause();
-			return;
-		}
+		if(!element) return;
+		element.click();
+		clearInterval(clickInitialize);
+		document.querySelector("video").pause();
 	},100);
 	
 	start9xBuddy(title);
@@ -115,12 +112,11 @@ else if(document.location.host=="upstream.to"){
 else if(document.location.host=="mixdrop.co"){
 	let clickInitialize=setInterval(function clickInit(){
 		const element:HTMLElement=document.querySelector("button.vjs-big-play-button");
-		if(element){
-			element.click();
-			clearInterval(clickInitialize);
-			clickInitialize=setInterval(clickInit,4000);//don't yet stop, maybe the listener was not attached yet, but only refresh not so often
-			return;
-		}
+		if(!element) return;
+		
+		element.click();
+		clearInterval(clickInitialize);
+		clickInitialize=setInterval(clickInit,4000);//don't yet stop, maybe the listener was not attached yet, but only refresh not so often
 	},100);
 	startVideoFinder(clickInitialize,()=>document.querySelector(".title>a")?.textContent);
 }
