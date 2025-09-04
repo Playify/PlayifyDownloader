@@ -17,7 +17,12 @@ openAll.onclick = async (e) => {
     e.preventDefault();
     console.log("[PlayifyDownloader] Opening all");
     await runOpenAll(!(e.ctrlKey || e.altKey || e.shiftKey), false);
+    markDone();
 };
+function markDone() {
+    if (!document.title.startsWith(`[✔️] `)) // noinspection RegExpDuplicateCharacterInClass
+        document.title = `[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g, "")}`;
+}
 async function runOpenAll(wait, close) {
     if (!document.title.startsWith(`[⏳] `)) // noinspection RegExpDuplicateCharacterInClass
         document.title = `[⏳] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g, "")}`;
@@ -25,13 +30,11 @@ async function runOpenAll(wait, close) {
         if (wait)
             await new Promise(resolve => chrome.runtime.sendMessage({ action: "wait" }, resolve));
         if (close)
-            await new Promise(resolve => chrome.runtime.sendMessage({ action: "closeDone" }, resolve));
+            chrome.runtime.sendMessage({ action: "closeDone" });
         console.log("[PlayifyDownloader] opening: " + a.href);
         window.open(a.href);
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    if (!document.title.startsWith(`[✔️] `)) // noinspection RegExpDuplicateCharacterInClass
-        document.title = `[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g, "")}`;
 }
 const autoAll = document.createElement("span");
 autoAll.textContent = "[Auto All]";
@@ -54,6 +57,14 @@ autoAll.onclick = async (e) => {
 async function runAutoAll(wait, close) {
     await runOpenAll(wait, close);
     let nextSeason = document.querySelector(".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
+    if (!nextSeason) {
+        if (close) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            chrome.runtime.sendMessage({ action: "closeDone" });
+        }
+        markDone();
+        return;
+    }
     nextSeason += "#auto=" + (wait ? "w" : "") + (close ? "c" : "");
     location.href = nextSeason;
 }

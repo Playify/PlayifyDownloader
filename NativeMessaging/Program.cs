@@ -110,7 +110,10 @@ internal static class Program{
 
 				Process.Start(new ProcessStartInfo{
 					FileName="cmd.exe",
-					Arguments=$"/C start \"{filename} - PlayifyDownloader\" /min cmd /c ffmpeg -i \"{url}\" -c copy \"{filename}.mp4\"",
+					Arguments=$"/C start \"{filename} - PlayifyDownloader\" /min cmd /c ffmpeg "+
+					          " -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 "+//auto reconnect
+					          $"-thread_queue_size 1024 "+//download and handle IO at same time
+					          $"-i \"{url}\" -c copy \"{filename}.mp4\"",
 					WindowStyle=ProcessWindowStyle.Hidden,
 					CreateNoWindow=true,
 					UseShellExecute=false,

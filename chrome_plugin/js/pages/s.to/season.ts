@@ -17,7 +17,12 @@ openAll.onclick=async e=>{
 	e.preventDefault();
 	console.log("[PlayifyDownloader] Opening all");
 	await runOpenAll(!(e.ctrlKey||e.altKey||e.shiftKey),false);
+	markDone();
 };
+function markDone(){
+	if(!document.title.startsWith(`[✔️] `))// noinspection RegExpDuplicateCharacterInClass
+		document.title=`[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g,"")}`;
+}
 async function runOpenAll(wait:boolean,close:boolean){
 	if(!document.title.startsWith(`[⏳] `))// noinspection RegExpDuplicateCharacterInClass
 		document.title=`[⏳] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g,"")}`;
@@ -25,18 +30,13 @@ async function runOpenAll(wait:boolean,close:boolean){
 	for(let a of document.querySelectorAll<HTMLAnchorElement>("table.seasonEpisodesList td:first-child>a")){
 		if(wait)
 			await new Promise(resolve=>chrome.runtime.sendMessage({action:"wait"},resolve));
-		if(close)
-			await new Promise(resolve=>chrome.runtime.sendMessage({action:"closeDone"},resolve));
+		if(close) chrome.runtime.sendMessage({action:"closeDone"});
 
 		console.log("[PlayifyDownloader] opening: "+a.href);
 		window.open(a.href);
 
 		await new Promise(resolve=>setTimeout(resolve,1000));
 	}
-
-
-	if(!document.title.startsWith(`[✔️] `))// noinspection RegExpDuplicateCharacterInClass
-		document.title=`[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g,"")}`;
 }
 
 
@@ -65,6 +65,14 @@ autoAll.onclick=async e=>{
 async function runAutoAll(wait:boolean,close:boolean){
 	await runOpenAll(wait,close);
 	let nextSeason=document.querySelector<HTMLAnchorElement>(".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
+	if(!nextSeason){
+		if(close){
+			await new Promise(resolve=>setTimeout(resolve,2000));
+			chrome.runtime.sendMessage({action:"closeDone"});
+		}
+		markDone();
+		return;
+	}
 	nextSeason+="#auto="+(wait?"w":"")+(close?"c":"");
 	location.href=nextSeason;
 }
