@@ -10,6 +10,7 @@ namespace DownloaderNativeMessaging;
 internal static class Program{
 	private static void Main(string[] args){
 		if(args.Length==0) SetupNativeMessaging();
+		else if(args.Length>0&&args[0]=="ffmpeg") FfmpegAndCheck(args[1],args[2]);
 		else{
 			Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
 			HandleMessages();
@@ -103,24 +104,63 @@ internal static class Program{
 				if(!url.StartsWith("http://")&&!url.StartsWith("https://")) return "Error: URL is not http or https";
 
 				var filename=message.Get("filename")?.AsString()??"";
-				if(Path.GetDirectoryName(filename) is{Length:>0} dir) Directory.CreateDirectory(dir);
-				
+
 				if(File.Exists(filename)) return "Error: File exists";
 				if(Path.GetInvalidPathChars().Any(filename.Contains)) return "Error: Filename invalid";
 
 				Process.Start(new ProcessStartInfo{
-					FileName="cmd.exe",
-					Arguments=$"/C start \"{filename} - PlayifyDownloader\" /min cmd /c ffmpeg "+
-					          " -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 "+//auto reconnect
-					          $"-thread_queue_size 1024 "+//download and handle IO at same time
-					          $"-i \"{url}\" -c copy \"{filename}.mp4\"",
-					WindowStyle=ProcessWindowStyle.Hidden,
-					CreateNoWindow=true,
-					UseShellExecute=false,
+					FileName=Assembly.GetExecutingAssembly().Location,
+					Arguments=$"ffmpeg \"{url}\" \"{filename}\"",
+					WindowStyle=ProcessWindowStyle.Minimized,
+					UseShellExecute=true,
 				});
+
 
 				return "started";
 		}
 		return null;
+	}
+
+	private static void FfmpegAndCheck(string url,string filename){
+		Console.Title=filename+" - PlayifyDownloader";
+
+		Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
+		if(Path.GetDirectoryName(filename) is{Length: >0} dir) Directory.CreateDirectory(dir);
+		
+		if(!filename.EndsWith(".mp4")) filename+=".mp4";
+
+		// Download
+		var dl=Process.Start(new ProcessStartInfo{
+			FileName="ffmpeg",
+			Arguments=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 "+//auto reconnect
+			          "-thread_queue_size 1024 "+//download and handle IO at same time
+			          $"-i \"{url}\" -c copy \"{filename}\"",
+			UseShellExecute=false,
+		});
+		dl?.WaitForExit();
+
+		// Verify
+		var check=new ProcessStartInfo{
+			FileName="ffmpeg",
+			Arguments=$"-v error -i \"{filename}\" -f null -",
+			RedirectStandardError=true,
+			RedirectStandardOutput=true,
+			UseShellExecute=false,
+			CreateNoWindow=true,
+		};
+
+		using var verify=Process.Start(check);
+		var stderr=verify?.StandardError.ReadToEnd();
+		verify?.WaitForExit();
+
+		if(!string.IsNullOrWhiteSpace(stderr)){
+			Console.ForegroundColor=ConsoleColor.Red;
+			Console.WriteLine("Defective file: "+filename);
+			Console.WriteLine(stderr);
+			File.WriteAllText(filename.Replace('/','_').Replace('\\','_')+".err","Defective File:\r\n"+stderr);
+		} else{
+			Console.ForegroundColor=ConsoleColor.Green;
+			Console.WriteLine("File OK: "+filename);
+		}
 	}
 }
