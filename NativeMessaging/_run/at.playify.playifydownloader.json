@@ -1,9 +1,0 @@
-{
-	"name":"at.playify.playifydownloader",
-	"description":"Native Messaging Host for Playify Downloader",
-	"path":"S:/Code/_Projects/own/PlayifyDownloader/NativeMessaging/_run/DownloaderNativeMessaging.exe",
-	"type":"stdio",
-	"allowed_origins":[
-		"chrome-extension://ehoepidkdcbciapefoifkiokcgeelele/"
-	]
-}
