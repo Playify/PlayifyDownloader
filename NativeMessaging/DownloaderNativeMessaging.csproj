@@ -25,6 +25,7 @@
 	    <PrivateAssets>all</PrivateAssets>
 	  </PackageReference>
 	  <PackageReference Include="PlayifyUtility" Version="1.6.0" />
+	  <PackageReference Include="PlayifyUtility.Windows" Version="1.5.1" />
 	</ItemGroup>
 
 	<ItemGroup>

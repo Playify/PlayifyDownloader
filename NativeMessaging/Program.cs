@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using Microsoft.Win32;
 using PlayifyUtility.Jsons;
 using PlayifyUtility.Streams.Data;
+using PlayifyUtility.Windows.Win;
 
 namespace DownloaderNativeMessaging;
 
@@ -18,6 +20,7 @@ internal static class Program{
 	}
 
 	private static void SetupNativeMessaging(){
+		
 		Console.WriteLine("1. Open Chrome and go to chrome://extensions/");
 		Console.WriteLine("2. Click on Details on the extension");
 		Console.WriteLine("3. URL should be chrome://extensions/?id=XXX, copy that");
@@ -51,6 +54,20 @@ internal static class Program{
 
 		Console.ForegroundColor=ConsoleColor.Green;
 		Console.WriteLine("Native Messaging setup complete!");
+		
+		
+		try{
+			var check=Process.Start(new ProcessStartInfo{
+				FileName="ffmpeg",
+				Arguments="-v quiet",
+				UseShellExecute=false,
+			})!;
+			check.WaitForExit();
+		} catch(Win32Exception e){
+			Console.ForegroundColor=ConsoleColor.Yellow;
+			Console.WriteLine("Warning: ffmpeg.exe was not found. This will lead to problems! (Reason: \""+e.Message+"\")");
+			Console.WriteLine("Either add it to the global PATH variable, or put it in the current folder.");
+		}
 
 		Console.ReadKey(true);
 	}
@@ -108,13 +125,23 @@ internal static class Program{
 				if(File.Exists(filename)) return "Error: File exists";
 				if(Path.GetInvalidPathChars().Any(filename.Contains)) return "Error: Filename invalid";
 
-				Process.Start(new ProcessStartInfo{
+				var foreground=WinWindow.Foreground;
+				var started=Process.Start(new ProcessStartInfo{
 					FileName=Assembly.GetExecutingAssembly().Location,
 					Arguments=$"ffmpeg \"{url}\" \"{filename}\"",
 					WindowStyle=ProcessWindowStyle.Minimized,
 					UseShellExecute=true,
-				});
-
+				})!;
+				for(int tryNumber=0;tryNumber<100;tryNumber++){
+					var newForeground=WinWindow.Foreground;
+					if(newForeground!=foreground)
+						if(newForeground.ProcessId!=started.Id) foreground=newForeground;
+						else{
+							foreground.SetForeground();
+							break;
+						}
+					Thread.Sleep(10);
+				}
 
 				return "started";
 		}
@@ -126,41 +153,32 @@ internal static class Program{
 
 		Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
 		if(Path.GetDirectoryName(filename) is{Length: >0} dir) Directory.CreateDirectory(dir);
-		
+
 		if(!filename.EndsWith(".mp4")) filename+=".mp4";
 
 		// Download
 		var dl=Process.Start(new ProcessStartInfo{
 			FileName="ffmpeg",
 			Arguments=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10 "+//auto reconnect
-			          "-thread_queue_size 1024 "+//download and handle IO at same time
+			          "-thread_queue_size 2048 "+//download and handle IO at same time
 			          $"-i \"{url}\" -c copy \"{filename}\"",
 			UseShellExecute=false,
 		});
-		dl?.WaitForExit();
+		if(dl==null) throw new Exception("Error starting ffmpeg");
+		dl.WaitForExit();
 
+		Console.WriteLine("ExitCode: "+dl.ExitCode);
 		// Verify
-		var check=new ProcessStartInfo{
-			FileName="ffmpeg",
-			Arguments=$"-v error -i \"{filename}\" -f null -",
-			RedirectStandardError=true,
-			RedirectStandardOutput=true,
-			UseShellExecute=false,
-			CreateNoWindow=true,
-		};
-
-		using var verify=Process.Start(check);
-		var stderr=verify?.StandardError.ReadToEnd();
-		verify?.WaitForExit();
-
-		if(!string.IsNullOrWhiteSpace(stderr)){
+		var errorFile=filename.Replace('/','_').Replace('\\','_')+".err";
+		if(dl.ExitCode!=0){
 			Console.ForegroundColor=ConsoleColor.Red;
 			Console.WriteLine("Defective file: "+filename);
-			Console.WriteLine(stderr);
-			File.WriteAllText(filename.Replace('/','_').Replace('\\','_')+".err","Defective File:\r\n"+stderr);
-		} else{
-			Console.ForegroundColor=ConsoleColor.Green;
-			Console.WriteLine("File OK: "+filename);
+			File.WriteAllText(errorFile,"Defective File:\r\n"+filename+"\r\nExitCode: "+dl.ExitCode);
+			return;
 		}
+
+		Console.ForegroundColor=ConsoleColor.Green;
+		Console.WriteLine("File OK: "+filename);
+		if(File.Exists(errorFile)) File.Delete(errorFile);
 	}
 }
