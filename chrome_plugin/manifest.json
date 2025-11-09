@@ -7,10 +7,12 @@
 		"service_worker":"js/background.js"
 	},
 	"action": {
-		"default_popup": "popup.html"
+		"default_popup": "pages/popup.html"
 	},
+	"options_page": "pages/options.html",
 	"permissions":[
 		"tabs",
+		"tabGroups",
 		"downloads",
 		"declarativeNetRequest",
 		"declarativeNetRequestWithHostAccess",
@@ -66,7 +68,13 @@
 			"js":["js/pages/filmpalast.js"],
 			"run_at":"document_idle"
 		},
-
+		{
+			"matches":[
+				"https://cine.to/*"
+			],
+			"js":["js/pages/cineTo.js"],
+			"run_at":"document_start"
+		},
 
 		{
 			"matches":[

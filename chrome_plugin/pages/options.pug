@@ -1,0 +1,40 @@
+doctype html
+html
+	head
+		style.
+			body {
+				font-family: sans-serif;
+				padding: 16px;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			textarea {
+				width: 100%;
+				min-height: 220px;
+				resize: vertical;
+			}
+	body
+		h2 Extension Settings
+
+		label
+			input(data-name="useFFmpeg" type="checkbox")
+			| Use FFMpeg instead of 9xBuddy for VOE
+
+		label
+			input(data-name="useSeriesFolder" type="checkbox")
+			| Put Series in folders for FFMpeg downloads
+
+		br
+		
+		label
+			| Max FFMpeg instances that run at the same time
+			input(data-name="maxFfmpeg" type="number")
+
+		br
+			
+		label
+			| Search Providers, each line, '???' will be filled in
+			textarea(data-name="searchProviders")
+
+		script(src="options.js")

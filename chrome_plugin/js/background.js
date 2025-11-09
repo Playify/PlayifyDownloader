@@ -162,6 +162,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return msg.action == "wait"; //return true if response is used
 });
 const messageReceiver = {
+    "multiSearch": async (msg) => {
+        const tabs = await Promise.all(msg.providers
+            .map((url, i) => chrome.tabs.create({ url, active: i == 0 })));
+        const groupId = await chrome.tabs.group({
+            tabIds: tabs.map(tab => tab.id)
+        });
+        await chrome.tabGroups.update(groupId, {
+            title: msg.title,
+            color: "cyan"
+        });
+    },
     download: async (msg, sender, sendResponse) => {
         let filename = await findFileName(msg, sender);
         if (filename == null)
@@ -392,10 +403,10 @@ const messageReceiver = {
             });
         });
     },
-    "wait": async (_, sender, sendResponse) => {
+    "wait": async (_, __, sendResponse) => {
         await waitNative();
         sendResponse();
-    }
+    },
 };
 const sendNative = (msg) => new Promise((res, rej) => chrome.runtime.sendNativeMessage("at.playify.playifydownloader", msg, r => r == undefined ? rej(chrome.runtime.lastError) : res(r)));
 let waitingNative = null;

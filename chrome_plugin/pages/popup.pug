@@ -1,0 +1,23 @@
+doctype html
+html
+	head
+		style.
+			body {
+				min-width: 150px;
+				padding: 8px;
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+			}
+			input {
+				width: 100%;
+				box-sizing: border-box;
+			}
+	body
+		input(data-action="search" placeholder="Search" autofocus)
+		
+		button(data-action="closeDone") Close done
+		
+		button(data-action="openConfig") Open Config
+
+		script(src="popup.js")

@@ -181,9 +181,10 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait" | "multiSearch",
 	title:string,
 	url:string,
+	providers:string[],
 }
 
 chrome.runtime.onMessage.addListener((msg:Message,sender,sendResponse)=>{
@@ -195,6 +196,17 @@ chrome.runtime.onMessage.addListener((msg:Message,sender,sendResponse)=>{
 });
 
 const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSender,sendResponse:(response?:any)=>void)=>Promise<void>>)={
+	"multiSearch":async(msg:Message)=>{
+		const tabs=await Promise.all(msg.providers
+			.map((url,i)=>chrome.tabs.create({url,active:i==0})));
+		const groupId=await chrome.tabs.group({
+			tabIds:tabs.map(tab=>tab.id)
+		})
+		await chrome.tabGroups.update(groupId,{
+			title:msg.title,
+			color:"cyan"
+		})
+	},
 	download:async(msg:Message,sender:MessageSender,sendResponse)=>{
 		let filename=await findFileName(msg,sender);
 		if(filename==null) return;
@@ -448,10 +460,10 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			});
 		});
 	},
-	"wait":async(_:Message,sender:MessageSender,sendResponse)=>{
+	"wait":async(_:Message,__:MessageSender,sendResponse)=>{
 		await waitNative();
 		sendResponse();
-	}
+	},
 };
 //endregion
 
