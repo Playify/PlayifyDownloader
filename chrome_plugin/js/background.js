@@ -10,15 +10,22 @@ async function runRemote(tabId, func, arg) {
     }))[0].result;
 }
 async function runRemoteFrame(tabId, frameId, func, arg) {
-    return (await chrome.scripting.executeScript({
-        func,
-        args: arg == undefined ? [] : [arg],
-        target: {
-            tabId,
-            frameIds: [frameId]
-        },
-        world: "MAIN",
-    }))[0].result;
+    try {
+        return (await chrome.scripting.executeScript({
+            func,
+            args: arg == undefined ? [] : [arg],
+            target: {
+                tabId,
+                frameIds: [frameId]
+            },
+            world: "MAIN",
+        }))[0].result;
+    }
+    catch (e) {
+        if (/^Frame with ID \d+ was removed.$/.test(e.message))
+            return undefined;
+        throw e;
+    }
 }
 async function runRemoteAndInFrame(tabId, frameId, func, arg) {
     return Promise.all([
@@ -207,6 +214,8 @@ const messageReceiver = {
                 }
             });
             await setEmoji(sender.tab.id, Emoji.Checked);
+            if (new URL(sender.tab.url).searchParams.has("autoClose"))
+                await chrome.tabs.remove(sender.tab.id);
             console.table({
                 url: msg.url,
                 filename,
@@ -321,6 +330,15 @@ const messageReceiver = {
             nativeSupported: await isNativeSupported
         });
     },
+    openTab: async (msg, sender) => {
+        await chrome.tabs.create({
+            url: msg.url,
+            active: false,
+            openerTabId: sender.tab.id,
+            windowId: sender.tab.windowId,
+            index: sender.tab.index + 1
+        });
+    },
     rightclick: async (_, sender) => {
         await runRemoteFrame(sender.tab.id, sender.frameId, () => {
             console.log("Unblocking Mouse");
@@ -366,6 +384,8 @@ const messageReceiver = {
             console.error("error calling native ffmpeg", e);
         }
         await setEmoji(sender.tab.id, Emoji.Checked);
+        if (new URL(sender.tab.url).searchParams.has("autoClose"))
+            await chrome.tabs.remove(sender.tab.id);
     },
     "3donlinefilms": async (_, sender) => {
         await runRemoteAndInFrame(sender.tab.id, sender.frameId, () => {

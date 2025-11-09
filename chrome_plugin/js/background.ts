@@ -19,15 +19,21 @@ async function runRemote<A,T>(tabId:number,func:(arg?:A)=>T,arg?:A):Promise<T>{
 async function runRemoteFrame<T>(tabId:number,frameId:number,func:()=>T):Promise<T>;
 async function runRemoteFrame<A,T>(tabId:number,frameId:number,func:(arg:A)=>T,arg:A):Promise<T>;
 async function runRemoteFrame<A,T>(tabId:number,frameId:number,func:(arg?:A)=>T,arg?:A):Promise<T>{
-	return (await chrome.scripting.executeScript({
-		func,
-		args:arg==undefined?[]:[arg],
-		target:{
-			tabId,
-			frameIds:[frameId]
-		},
-		world:"MAIN",
-	}))[0].result;
+	try{
+		return (await chrome.scripting.executeScript({
+			func,
+			args:arg==undefined?[]:[arg],
+			target:{
+				tabId,
+				frameIds:[frameId]
+			},
+			world:"MAIN",
+		}))[0].result;
+	}catch(e){
+		if(/^Frame with ID \d+ was removed.$/.test(e.message))
+			return undefined;
+		throw e;
+	}
 }
 
 async function runRemoteAndInFrame<T>(tabId:number,frameId:number,func:()=>T):Promise<[T,T]>;
@@ -181,9 +187,10 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait" | "multiSearch",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait" | "multiSearch" | "openTab",
 	title:string,
 	url:string,
+	
 	providers:string[],
 }
 
@@ -251,6 +258,9 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 
 
 			await setEmoji(sender.tab.id,Emoji.Checked);
+			if(new URL(sender.tab.url).searchParams.has("autoClose"))
+				await chrome.tabs.remove(sender.tab.id);
+			
 
 			console.table({
 				url:msg.url,
@@ -378,6 +388,15 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			nativeSupported:await isNativeSupported
 		} as const);
 	},
+	openTab:async(msg:Message,sender:MessageSender)=>{
+		await chrome.tabs.create({
+			url:msg.url,
+			active:false,
+			openerTabId:sender.tab.id,
+			windowId:sender.tab.windowId,
+			index:sender.tab.index+1
+		});
+	},
 	rightclick:async(_:Message,sender:MessageSender)=>{
 		await runRemoteFrame(sender.tab.id,sender.frameId,()=>{
 			console.log("Unblocking Mouse");
@@ -424,6 +443,10 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 		}
 
 		await setEmoji(sender.tab.id,Emoji.Checked);
+		
+		if(new URL(sender.tab.url).searchParams.has("autoClose"))
+			await chrome.tabs.remove(sender.tab.id);
+		
 	},
 	"3donlinefilms":async(_:Message,sender:MessageSender)=>{
 		await runRemoteAndInFrame(sender.tab.id,sender.frameId,()=>{
