@@ -52,11 +52,12 @@ const Emoji={
 	Mouse:"🖱️",
 } as const;
 
+// @ts-ignore setEmoji is defined multiple times in different files
 async function setEmoji(tabId:number,emoji:string){
 	try{
 		await runRemote(tabId,emoji=>{
-			if(!document.title.startsWith(`[${emoji}] `))// noinspection RegExpDuplicateCharacterInClass
-				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️⌛]+] )+/g,"")}`;
+			if(!document.title.startsWith(`[${emoji}] `))
+				document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱⏳ \d\/]+] )+/g,"")}`;
 		},emoji);
 	}catch(e){
 		//Don't care if tab is already closed

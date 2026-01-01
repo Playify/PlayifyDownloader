@@ -1,6 +1,5 @@
 console.log("[PlayifyDownloader] init season");
 
-// javascript:navigator.clipboard.writeText([...document.querySelectorAll("a:has(strong)")].map(x=>"start \"\" \""+x.href+"\"\n").join("")).catch(alert)
 const openAll=document.createElement("span");
 openAll.textContent="[Season]";
 Object.assign(openAll.style,{
@@ -17,19 +16,25 @@ openAll.onclick=async e=>{
 	e.preventDefault();
 	console.log("[PlayifyDownloader] Opening all");
 	await runOpenAll(!(e.ctrlKey||e.altKey||e.shiftKey),true);
-	markDone();
+	setEmoji("✔️");
 };
 
-function markDone(){
-	if(!document.title.startsWith(`[✔️] `))// noinspection RegExpDuplicateCharacterInClass
-		document.title=`[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g,"")}`;
+// @ts-ignore setEmoji is defined multiple times in different files
+function setEmoji(emoji:string){
+	if(!document.title.startsWith(`[${emoji}] `))
+		document.title=`[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱⏳ \d\/]+] )+/g,"")}`;
 }
 
 async function runOpenAll(wait:boolean,close:boolean){
-	if(!document.title.startsWith(`[⏳] `))// noinspection RegExpDuplicateCharacterInClass
-		document.title=`[⏳] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g,"")}`;
+	setEmoji("⏳");
 
-	for(let a of document.querySelectorAll<HTMLAnchorElement>("table.seasonEpisodesList td:first-child>a")){
+	let i=0;
+
+	let all=document.querySelectorAll<HTMLAnchorElement>(
+		"table.seasonEpisodesList td:first-child>a");
+
+	setEmoji(`⏳ ${i++}/${all.length}`);
+	for(let a of all){
 		if(wait)
 			await new Promise(resolve=>chrome.runtime.sendMessage({action:"wait"},resolve));
 
@@ -37,6 +42,8 @@ async function runOpenAll(wait:boolean,close:boolean){
 		if(close) url+=(url.includes("?")?"&":"?")+"autoClose";
 
 		console.log("[PlayifyDownloader] opening: "+url);
+		setEmoji(`⏳ ${i++}/${all.length}`);
+
 		chrome.runtime.sendMessage({action:"openTab",url});
 
 		await new Promise(resolve=>setTimeout(resolve,1000));
@@ -68,9 +75,10 @@ autoAll.onclick=async e=>{
 
 async function runAutoAll(wait:boolean,close:boolean){
 	await runOpenAll(wait,close);
-	let nextSeason=document.querySelector<HTMLAnchorElement>(".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
+	let nextSeason=document.querySelector<HTMLAnchorElement>(
+		".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
 	if(!nextSeason){
-		markDone();
+		setEmoji("✔️");
 		return;
 	}
 	nextSeason+="#auto="+(wait?"w":"")+(close?"c":"");

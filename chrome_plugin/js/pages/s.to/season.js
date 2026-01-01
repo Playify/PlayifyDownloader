@@ -1,6 +1,5 @@
 "use strict";
 console.log("[PlayifyDownloader] init season");
-// javascript:navigator.clipboard.writeText([...document.querySelectorAll("a:has(strong)")].map(x=>"start \"\" \""+x.href+"\"\n").join("")).catch(alert)
 const openAll = document.createElement("span");
 openAll.textContent = "[Season]";
 Object.assign(openAll.style, {
@@ -17,22 +16,26 @@ openAll.onclick = async (e) => {
     e.preventDefault();
     console.log("[PlayifyDownloader] Opening all");
     await runOpenAll(!(e.ctrlKey || e.altKey || e.shiftKey), true);
-    markDone();
+    setEmoji("✔️");
 };
-function markDone() {
-    if (!document.title.startsWith(`[✔️] `)) // noinspection RegExpDuplicateCharacterInClass
-        document.title = `[✔️] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g, "")}`;
+// @ts-ignore setEmoji is defined multiple times in different files
+function setEmoji(emoji) {
+    if (!document.title.startsWith(`[${emoji}] `))
+        document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱⏳ \d\/]+] )+/g, "")}`;
 }
 async function runOpenAll(wait, close) {
-    if (!document.title.startsWith(`[⏳] `)) // noinspection RegExpDuplicateCharacterInClass
-        document.title = `[⏳] ${document.title.replace(/^(\[[✔️❌🖱⏳]+] )+/g, "")}`;
-    for (let a of document.querySelectorAll("table.seasonEpisodesList td:first-child>a")) {
+    setEmoji("⏳");
+    let i = 0;
+    let all = document.querySelectorAll("table.seasonEpisodesList td:first-child>a");
+    setEmoji(`⏳ ${i++}/${all.length}`);
+    for (let a of all) {
         if (wait)
             await new Promise(resolve => chrome.runtime.sendMessage({ action: "wait" }, resolve));
         let url = a.href;
         if (close)
             url += (url.includes("?") ? "&" : "?") + "autoClose";
         console.log("[PlayifyDownloader] opening: " + url);
+        setEmoji(`⏳ ${i++}/${all.length}`);
         chrome.runtime.sendMessage({ action: "openTab", url });
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -59,7 +62,7 @@ async function runAutoAll(wait, close) {
     await runOpenAll(wait, close);
     let nextSeason = document.querySelector(".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
     if (!nextSeason) {
-        markDone();
+        setEmoji("✔️");
         return;
     }
     nextSeason += "#auto=" + (wait ? "w" : "") + (close ? "c" : "");

@@ -1,15 +1,17 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32;
 using PlayifyUtility.Jsons;
 using PlayifyUtility.Streams.Data;
+using PlayifyUtility.Utils;
 using PlayifyUtility.Windows.Win;
 
 namespace DownloaderNativeMessaging;
 
-internal static class Program{
+internal static partial class Program{
 	private static void Main(string[] args){
 		if(args.Length==0) SetupNativeMessaging();
 		else if(args.Length>0&&args[0]=="ffmpeg") FfmpegAndCheck(args[1],args[2]);
@@ -125,34 +127,42 @@ internal static class Program{
 				if(File.Exists(filename)) return "Error: File exists";
 				if(Path.GetInvalidPathChars().Any(filename.Contains)) return "Error: Filename invalid";
 
-				var foreground=WinWindow.Foreground;
-				var started=Process.Start(new ProcessStartInfo{
-					FileName=Assembly.GetExecutingAssembly().Location,
-					Arguments=$"ffmpeg \"{url}\" \"{filename}\"",
-					WindowStyle=ProcessWindowStyle.Minimized,
-					UseShellExecute=true,
-				})!;
-				for(int tryNumber=0;tryNumber<100;tryNumber++){
-					var newForeground=WinWindow.Foreground;
-					if(newForeground!=foreground)
-						if(newForeground.ProcessId!=started.Id) foreground=newForeground;
-						else{
-							foreground.SetForeground();
-							break;
-						}
-					Thread.Sleep(10);
-				}
+				var si = new StartupInfo {
+					cb = Marshal.SizeOf<StartupInfo>(),
+					dwFlags = 0x00000001,//STARTF_USESHOWWINDOW
+					wShowWindow = 7,//SW_SHOWMINNOACTIVE
+				};
+
+				CreateProcess(
+					null,
+					$"\"{Assembly.GetExecutingAssembly().Location}\" ffmpeg \"{url}\" \"{filename}\"",
+					IntPtr.Zero,
+					IntPtr.Zero,
+					false,
+					0x00000010,//CREATE_NEW_CONSOLE
+					IntPtr.Zero,
+					null,
+					ref si,
+					out _
+				);
 
 				return "started";
 		}
 		return null;
 	}
 
+
 	private static void FfmpegAndCheck(string url,string filename){
 		Console.Title=filename+" - PlayifyDownloader";
 
 		Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
 		if(Path.GetDirectoryName(filename) is{Length: >0} dir) Directory.CreateDirectory(dir);
+		
+		var errorFile=filename.Replace('/','_').Replace('\\','_')+".err";
+		if(File.Exists(errorFile))
+			try{
+				File.Delete(errorFile);
+			}catch(IOException){}
 
 		if(!filename.EndsWith(".mp4")) filename+=".mp4";
 
@@ -169,11 +179,14 @@ internal static class Program{
 
 		Console.WriteLine("ExitCode: "+dl.ExitCode);
 		// Verify
-		var errorFile=filename.Replace('/','_').Replace('\\','_')+".err";
 		if(dl.ExitCode!=0){
 			Console.ForegroundColor=ConsoleColor.Red;
 			Console.WriteLine("Defective file: "+filename);
-			File.WriteAllText(errorFile,"Defective File:\r\n"+filename+"\r\nExitCode: "+dl.ExitCode);
+			try{
+				File.WriteAllText(errorFile,"Defective File:\r\n"+filename+"\r\nExitCode: "+dl.ExitCode);
+			} catch(Exception e){
+				File.WriteAllText($"err_{DateTime.Now:yyyyMMdd_HHmmss}.err","Defective File:\r\n"+filename+"\r\nExitCode: "+dl.ExitCode+"\r\n"+e);
+			}
 			return;
 		}
 

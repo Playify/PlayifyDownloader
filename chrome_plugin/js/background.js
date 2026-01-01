@@ -38,11 +38,12 @@ const Emoji = {
     Cross: "❌",
     Mouse: "🖱️",
 };
+// @ts-ignore setEmoji is defined multiple times in different files
 async function setEmoji(tabId, emoji) {
     try {
         await runRemote(tabId, emoji => {
-            if (!document.title.startsWith(`[${emoji}] `)) // noinspection RegExpDuplicateCharacterInClass
-                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱️⌛]+] )+/g, "")}`;
+            if (!document.title.startsWith(`[${emoji}] `))
+                document.title = `[${emoji}] ${document.title.replace(/^(\[[✔️❌🖱⏳ \d\/]+] )+/g, "")}`;
         }, emoji);
     }
     catch (e) {
