@@ -28,9 +28,14 @@
 	"content_scripts":[
 		{
 			"matches":[
+				"https://s.to/serie/*/staffel-*/episode-*",
+				"https://serien.sx/serie/*/staffel-*/episode-*",
+				"https://aniworld.to/anime/*/staffel-*/episode-*",
+				
 				"https://s.to/serie/stream/*/staffel-*/episode-*",
 				"https://serien.sx/serie/stream/*/staffel-*/episode-*",
 				"https://aniworld.to/anime/stream/*/staffel-*/episode-*",
+				
 				"https://s.to/serie/stream/*/filme/film-*",
 				"https://serien.sx/serie/stream/*/filme/film-*",
 				"https://aniworld.to/anime/stream/*/filme/film-*"
@@ -40,20 +45,35 @@
 		},
 		{
 			"matches":[
+				"https://s.to/serie/*",
+				"https://serien.sx/serie/*",
+				"https://aniworld.to/anime/*",
+				
 				"https://s.to/serie/stream/*",
 				"https://serien.sx/serie/stream/*",
 				"https://aniworld.to/anime/stream/*",
+				
+				"https://s.to/serie/*/staffel-*",
+				"https://serien.sx/serie/*/staffel-*",
+				"https://aniworld.to/anime/*/staffel-*",
+				
 				"https://s.to/serie/stream/*/staffel-*",
 				"https://serien.sx/serie/stream/*/staffel-*",
 				"https://aniworld.to/anime/stream/*/staffel-*",
+				
 				"https://s.to/serie/stream/*/filme",
 				"https://serien.sx/serie/stream/*/filme",
 				"https://aniworld.to/anime/stream/*/filme"
 			],
 			"exclude_matches":[
+				"https://s.to/serie/*/staffel-*/*",
+				"https://serien.sx/serie/*/staffel-*/*",
+				"https://aniworld.to/anime/*/staffel-*/*",
+				
 				"https://s.to/serie/stream/*/staffel-*/*",
 				"https://serien.sx/serie/stream/*/staffel-*/*",
 				"https://aniworld.to/anime/stream/*/staffel-*/*",
+				
 				"https://s.to/serie/stream/*/filme/*",
 				"https://serien.sx/serie/stream/*/filme/*",
 				"https://aniworld.to/anime/stream/*/filme/*"

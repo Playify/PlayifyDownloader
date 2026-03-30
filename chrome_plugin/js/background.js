@@ -115,7 +115,8 @@ async function getNameFromUrl(tab, variant) {
         case "aniworld.to":
         case "serien.sx":
         case "s.to": {
-            const match = url.pathname.match(/^\/(?:serie|anime)\/stream\/([^/]*)\/staffel-([0-9]+)\/episode-([0-9]+)/i);
+            //The /stream part is from old layout
+            const match = url.pathname.match(/^\/(?:serie|anime)(?:\/stream)?\/([^/]*)\/staffel-([0-9]+)\/episode-([0-9]+)/i);
             if (match) {
                 switch (variant) {
                     case NameVariant.NamedSeriesWithFolders:
@@ -127,7 +128,7 @@ async function getNameFromUrl(tab, variant) {
                         return match[3];
                 }
             }
-            const matchFilm = url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/filme\/film-([0-9]+)/i);
+            const matchFilm = url.pathname.match(/^\/(?:serie|anime)(?:\/stream)?\/[^/]*\/filme\/film-([0-9]+)/i);
             if (matchFilm)
                 return await runRemote(tab.id, () => document.querySelector(".episodeGermanTitle,.episodeEnglishTitle").textContent);
             throw new Error("Unknown s.to path: " + url);
@@ -383,6 +384,29 @@ const messageReceiver = {
         }
         catch (e) {
             console.error("error calling native ffmpeg", e);
+        }
+        await setEmoji(sender.tab.id, Emoji.Checked);
+        if (new URL(sender.tab.url).searchParams.has("autoClose"))
+            await chrome.tabs.remove(sender.tab.id);
+    },
+    wget: async (msg, sender) => {
+        console.table({
+            action: "wget",
+            ...msg
+        });
+        let s;
+        try {
+            s = await sendNative({
+                ...msg,
+                action: "wget",
+            });
+            if (s != "downloaded") {
+                console.error("error calling native wget. Got response: ", s);
+                return;
+            }
+        }
+        catch (e) {
+            console.error("error calling native wget", e);
         }
         await setEmoji(sender.tab.id, Emoji.Checked);
         if (new URL(sender.tab.url).searchParams.has("autoClose"))

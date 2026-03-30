@@ -134,7 +134,8 @@ async function getNameFromUrl(tab:Tab,variant:NameVariant):Promise<string>{
 		case "aniworld.to":
 		case "serien.sx":
 		case "s.to":{
-			const match=url.pathname.match(/^\/(?:serie|anime)\/stream\/([^/]*)\/staffel-([0-9]+)\/episode-([0-9]+)/i);
+			//The /stream part is from old layout
+			const match=url.pathname.match(/^\/(?:serie|anime)(?:\/stream)?\/([^/]*)\/staffel-([0-9]+)\/episode-([0-9]+)/i);
 			if(match){
 				switch(variant){
 					case NameVariant.NamedSeriesWithFolders:
@@ -146,7 +147,7 @@ async function getNameFromUrl(tab:Tab,variant:NameVariant):Promise<string>{
 						return match[3];
 				}
 			}
-			const matchFilm=url.pathname.match(/^\/(?:serie|anime)\/stream\/[^/]*\/filme\/film-([0-9]+)/i);
+			const matchFilm=url.pathname.match(/^\/(?:serie|anime)(?:\/stream)?\/[^/]*\/filme\/film-([0-9]+)/i);
 			if(matchFilm) return await runRemote(tab.id,
 				()=>document.querySelector(".episodeGermanTitle,.episodeEnglishTitle").textContent);
 			throw new Error("Unknown s.to path: "+url);
@@ -188,7 +189,7 @@ chrome.runtime.onInstalled.addListener(()=>chrome.declarativeNetRequest.updateDy
 
 //region Message
 interface Message{
-	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "3donlinefilms" | "filmpalast" | "wait" | "multiSearch" | "openTab",
+	action:"download" | "9xbuddy" | "rightclick" | "m3u8" | "closeDone" | "ffmpeg" | "wget" | "3donlinefilms" | "filmpalast" | "wait" | "multiSearch" | "openTab",
 	title:string,
 	url:string,
 	
@@ -447,7 +448,31 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 		
 		if(new URL(sender.tab.url).searchParams.has("autoClose"))
 			await chrome.tabs.remove(sender.tab.id);
+	},
+	wget:async(msg:Message,sender:MessageSender)=>{
+		console.table({
+			action:"wget",
+			...msg
+		});
+
+		let s:string;
+		try{
+			s=await sendNative({
+				...msg,
+				action:"wget",
+			}) as any;
+			if(s!="downloaded"){
+				console.error("error calling native wget. Got response: ",s);
+				return;
+			}
+		}catch(e){
+			console.error("error calling native wget",e);
+		}
+
+		await setEmoji(sender.tab.id,Emoji.Checked);
 		
+		if(new URL(sender.tab.url).searchParams.has("autoClose"))
+			await chrome.tabs.remove(sender.tab.id);
 	},
 	"3donlinefilms":async(_:Message,sender:MessageSender)=>{
 		await runRemoteAndInFrame(sender.tab.id,sender.frameId,()=>{
@@ -493,7 +518,7 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 
 //region Native
 interface NativeMessage{
-	action:"close" | "args" | "ffmpeg" | "version" | "count",
+	action:"close" | "args" | "ffmpeg" | "wget" | "version" | "count",
 	url?:string
 	filename?:string
 }

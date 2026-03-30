@@ -1,5 +1,6 @@
 "use strict";
-console.log("[PlayifyDownloader] init season");
+const isNew = document.querySelector("#episode-nav.mb-3 a") != null;
+console.log("[PlayifyDownloader] init season new=" + isNew);
 const openAll = document.createElement("span");
 openAll.textContent = "[Season]";
 Object.assign(openAll.style, {
@@ -8,7 +9,9 @@ Object.assign(openAll.style, {
     left: "0",
     zIndex: "99999",
     fontSize: "2rem",
+    lineHeight: "1.1",
     color: "blue",
+    background: "#09f",
     cursor: "pointer",
 });
 document.body.append(openAll);
@@ -26,7 +29,8 @@ function setEmoji(emoji) {
 async function runOpenAll(wait, close) {
     setEmoji("⏳");
     let i = 0;
-    let all = document.querySelectorAll("table.seasonEpisodesList td:first-child>a");
+    let all = document.querySelectorAll(isNew ? "#episode-nav a" :
+        "table.seasonEpisodesList td:first-child>a");
     setEmoji(`⏳ ${i++}/${all.length}`);
     for (let a of all) {
         if (wait)
@@ -44,11 +48,13 @@ const autoAll = document.createElement("span");
 autoAll.textContent = "[Series]";
 Object.assign(autoAll.style, {
     position: "fixed",
-    top: "2rem",
+    top: "2.2rem",
     left: "0",
     zIndex: "99999",
     fontSize: "2rem",
+    lineHeight: "1.1",
     color: "blue",
+    background: "#09f",
     cursor: "pointer",
 });
 document.body.append(autoAll);
@@ -60,7 +66,8 @@ autoAll.onclick = async (e) => {
 };
 async function runAutoAll(wait, close) {
     await runOpenAll(wait, close);
-    let nextSeason = document.querySelector(".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
+    let nextSeason = document.querySelector(isNew ? "#season-nav li:has(a.bg-primary)+li a" :
+        ".hosterSiteDirectNav>ul:first-child li:has(a.active)+li a")?.href;
     if (!nextSeason) {
         setEmoji("✔️");
         return;

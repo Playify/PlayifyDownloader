@@ -24,8 +24,9 @@
 	  <PackageReference Include="Costura.Fody" Version="6.0.0">
 	    <PrivateAssets>all</PrivateAssets>
 	  </PackageReference>
-	  <PackageReference Include="PlayifyUtility" Version="1.6.6" />
+	  <PackageReference Include="PlayifyUtility" Version="1.6.7" />
 	  <PackageReference Include="PlayifyUtility.Windows" Version="1.5.2" />
+	  <PackageReference Include="System.Net.Http" Version="4.3.4" />
 	</ItemGroup>
 
 	<ItemGroup>

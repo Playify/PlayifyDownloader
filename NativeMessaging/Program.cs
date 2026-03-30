@@ -1,13 +1,12 @@
 ﻿using System.ComponentModel;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32;
 using PlayifyUtility.Jsons;
-using PlayifyUtility.Streams.Data;
-using PlayifyUtility.Utils;
-using PlayifyUtility.Windows.Win;
+using PlayifyUtility.Utils.Extensions;
 
 namespace DownloaderNativeMessaging;
 
@@ -17,7 +16,7 @@ internal static partial class Program{
 		else if(args.Length>0&&args[0]=="ffmpeg") FfmpegAndCheck(args[1],args[2]);
 		else{
 			Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
-			HandleMessages();
+			HandleMessages().Wait();
 		}
 	}
 
@@ -74,15 +73,15 @@ internal static partial class Program{
 		Console.ReadKey(true);
 	}
 
-	private static void HandleMessages(){
-		var input=new DataInput(Console.OpenStandardInput());
+	private static async Task HandleMessages(){
+		var input=Console.OpenStandardInput();
 		try{
 			while(true)
-				if(OnReceive(Json.ParseOrNull(
+				if(await OnReceive(Json.ParseOrNull(
 					             Encoding.UTF8.GetString(
-						             input.ReadFully(
+						             await input.ReadFullyAsync(
 							             BitConverter.ToInt32(
-								             input.ReadFully(4),0))))
+								             await input.ReadFullyAsync(4),0))))
 				             ??throw new Exception("Error parsing Json message")) is{} response)
 					SendMessage(response);
 		} catch(EndOfStreamException){
@@ -92,10 +91,10 @@ internal static partial class Program{
 		}
 	}
 
-	private static DataOutput? _dataOutput;
+	private static Stream? _dataOutput;
 
 	private static void SendMessage(Json response){
-		var output=_dataOutput??=new DataOutput(Console.OpenStandardOutput());
+		var output=_dataOutput??=Console.OpenStandardOutput();
 		var messageBytes=Encoding.UTF8.GetBytes(response.ToString());
 		output.Write(BitConverter.GetBytes(messageBytes.Length));
 		output.Write(messageBytes);
@@ -103,7 +102,7 @@ internal static partial class Program{
 	}
 
 
-	private static Json? OnReceive(Json message){
+	private static async ValueTask<Json?> OnReceive(Json message){
 		var action=message.Get("action")?.AsString()??"";
 
 		switch(action){
@@ -118,7 +117,52 @@ internal static partial class Program{
 				return processes.Length;
 			case "close":
 				return "close";
-			case "ffmpeg":
+			case "wget":
+				try{
+					var url=message.Get("url")?.AsString()??"";
+					if(!url.StartsWith("http://")&&!url.StartsWith("https://")) return "Error: URL is not http or https";
+
+					var filename=message.Get("filename")?.AsString()??"";
+
+					if(File.Exists(filename)) return "Error: File exists";
+					if(Path.GetInvalidPathChars().Any(filename.Contains)) return "Error: Filename invalid";
+
+
+					using var http = new HttpClient();
+
+					using var response = await http.GetAsync(url);
+					response.EnsureSuccessStatusCode();
+
+					if((message.Get("addExtension")?.AsBool()??false)&&
+					   response.Content.Headers.ContentType?.MediaType is {} mediaType){
+						filename+=mediaType switch{
+							"image/jpeg"=>".jpg",
+							"image/png"=>".png",
+							"image/gif"=>".gif",
+							"image/webp"=>".webp",
+							"image/svg+xml"=>".svg",
+							
+							"video/mp4" => ".mp4",
+							"video/webm" => ".webm",
+							_=>throw new Exception("Unknown mime type: "+mediaType),
+						};
+					}
+					
+					using(var fs = new FileStream(filename, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+						await response.Content.CopyToAsync(fs);
+
+					if(message.Get("date")?.AsString() is {} dateString&&DateTimeOffset.TryParse(dateString,out var date)){
+						var localTime = date.LocalDateTime;
+						File.SetCreationTime(filename,localTime);
+						File.SetLastWriteTime(filename,localTime);
+						File.SetLastAccessTime(filename,localTime);
+					}
+
+					return "downloaded";
+				} catch(Exception e){
+					return "Error: "+e+"\n"+message;
+				}
+			case "ffmpeg":{
 				var url=message.Get("url")?.AsString()??"";
 				if(!url.StartsWith("http://")&&!url.StartsWith("https://")) return "Error: URL is not http or https";
 
@@ -127,10 +171,10 @@ internal static partial class Program{
 				if(File.Exists(filename)) return "Error: File exists";
 				if(Path.GetInvalidPathChars().Any(filename.Contains)) return "Error: Filename invalid";
 
-				var si = new StartupInfo {
-					cb = Marshal.SizeOf<StartupInfo>(),
-					dwFlags = 0x00000001,//STARTF_USESHOWWINDOW
-					wShowWindow = 7,//SW_SHOWMINNOACTIVE
+				var si=new StartupInfo{
+					cb=Marshal.SizeOf<StartupInfo>(),
+					dwFlags=0x00000001,//STARTF_USESHOWWINDOW
+					wShowWindow=7,//SW_SHOWMINNOACTIVE
 				};
 
 				CreateProcess(
@@ -148,11 +192,14 @@ internal static partial class Program{
 
 				return "started";
 		}
+	}
 		return null;
 	}
 
 
 	private static void FfmpegAndCheck(string url,string filename){
+		filename=Path.GetInvalidFileNameChars().Aggregate(filename,(s,c)=>c is '/' or '\\'?s:s.Replace(c,'#'));
+		
 		Console.Title=filename+" - PlayifyDownloader";
 
 		Directory.SetCurrentDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads"));
