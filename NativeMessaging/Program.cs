@@ -130,7 +130,7 @@ internal static partial class Program{
 
 					using var http = new HttpClient();
 
-					using var response = await http.GetAsync(url);
+					using var response = await http.GetAsync(url,HttpCompletionOption.ResponseHeadersRead);
 					response.EnsureSuccessStatusCode();
 
 					if((message.Get("addExtension")?.AsBool()??false)&&

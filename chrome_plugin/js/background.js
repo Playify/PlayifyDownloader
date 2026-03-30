@@ -391,8 +391,8 @@ const messageReceiver = {
     },
     wget: async (msg, sender) => {
         console.table({
-            action: "wget",
-            ...msg
+            ...msg,
+            action: "wget"
         });
         let s;
         try {
@@ -402,11 +402,13 @@ const messageReceiver = {
             });
             if (s != "downloaded") {
                 console.error("error calling native wget. Got response: ", s);
+                await runRemote(sender.tab.id, arr => console.error(...arr), ["error calling native wget. Got response: ", s]);
                 return;
             }
         }
         catch (e) {
             console.error("error calling native wget", e);
+            await runRemote(sender.tab.id, arr => console.error(...arr), ["error calling native wget", e]);
         }
         await setEmoji(sender.tab.id, Emoji.Checked);
         if (new URL(sender.tab.url).searchParams.has("autoClose"))

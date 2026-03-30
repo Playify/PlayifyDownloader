@@ -451,8 +451,8 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 	},
 	wget:async(msg:Message,sender:MessageSender)=>{
 		console.table({
-			action:"wget",
-			...msg
+			...msg,
+			action:"wget"
 		});
 
 		let s:string;
@@ -463,10 +463,12 @@ const messageReceiver:(Record<Message["action"],(msg:Message,sender:MessageSende
 			}) as any;
 			if(s!="downloaded"){
 				console.error("error calling native wget. Got response: ",s);
+				await runRemote(sender.tab.id,arr=>console.error(...arr),["error calling native wget. Got response: ",s]);
 				return;
 			}
 		}catch(e){
 			console.error("error calling native wget",e);
+			await runRemote(sender.tab.id,arr=>console.error(...arr),["error calling native wget",e]);
 		}
 
 		await setEmoji(sender.tab.id,Emoji.Checked);
